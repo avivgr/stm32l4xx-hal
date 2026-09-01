@@ -121,6 +121,10 @@ usb-device = "0.2.3"
 usbd-serial = "0.1.0"
 heapless = "0.5"
 
+[dev-dependencies.cortex-m]
+version = "0.7"
+features = ["critical-section-single-core"]
+
 [dev-dependencies.cortex-m-rtic]
 version = "0.5.9"
 default-features = false
@@ -202,4 +206,8 @@ required-features = ["rt"]
 
 [[example]]
 name = "adc_dma"
+required-features = ["rt"]
+
+[[example]]
+name = "adc_dma_timer"
 required-features = ["rt"]

@@ -344,3 +344,52 @@ hal! {
     TIM5:  (tim5, free_running_tim5, APB1R1, u32, timclk1),
     TIM17: (tim17, free_running_tim17, APB2, u16, timclk2),
 }
+
+/// Signal driving a basic timer's trigger output (TRGO).
+///
+/// This is the `TIMx_CR2.MMS` field. [`MasterMode::Update`] can be used to
+/// trigger an ADC or DAC from timer update events.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum MasterMode {
+    /// `UG` from `TIMx_EGR` drives TRGO.
+    Reset,
+    /// The counter enable signal drives TRGO.
+    Enable,
+    /// The timer update event drives TRGO.
+    Update,
+}
+
+macro_rules! basic_timer_trgo {
+    ($($TIM:ident,)+) => {
+        $(
+            impl Timer<$TIM> {
+                /// Selects what this timer emits on its trigger output.
+                ///
+                /// Pair with [`Adc::configure_external_trigger`] to drive
+                /// conversions from timer update events. Software-generated
+                /// update events, such as writes to `TIMx_EGR.UG`, also drive
+                /// TRGO in [`MasterMode::Update`].
+                ///
+                /// [`Adc::configure_external_trigger`]: crate::adc::Adc::configure_external_trigger
+                pub fn set_master_mode(&mut self, mode: MasterMode) {
+                    self.tim.cr2.modify(|_, w| match mode {
+                        MasterMode::Reset => w.mms().reset(),
+                        MasterMode::Enable => w.mms().enable(),
+                        MasterMode::Update => w.mms().update(),
+                    });
+                }
+            }
+        )+
+    };
+}
+
+basic_timer_trgo!(TIM6,);
+
+#[cfg(not(any(
+    feature = "stm32l412",
+    feature = "stm32l422",
+    feature = "stm32l451",
+    feature = "stm32l452",
+    feature = "stm32l462",
+)))]
+basic_timer_trgo!(TIM7,);
