@@ -119,6 +119,52 @@ pub enum DmaMode {
     // Circular = 2,
 }
 
+/// External event that can trigger a regular conversion.
+///
+/// Values are the `ADC_CFGR.EXTSEL` encodings from the "ADC1 and ADC2 -
+/// External triggers for regular channels" tables in the reference manuals.
+/// The mapping is per-device and per-ADC, so this type is not accepted by
+/// ADC3, which uses different encodings.
+///
+/// Some sources are not available on every device in the family; consult the
+/// reference manual for the target before selecting one.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum ExternalTrigger {
+    /// TIM1_CH1 event
+    Tim1Cc1 = 0b0000,
+    /// TIM1_CH2 event
+    Tim1Cc2 = 0b0001,
+    /// TIM1_CH3 event
+    Tim1Cc3 = 0b0010,
+    /// TIM2_CH2 event
+    Tim2Cc2 = 0b0011,
+    /// TIM3_TRGO event. Not available on every device.
+    Tim3Trgo = 0b0100,
+    /// EXTI line 11
+    Exti11 = 0b0110,
+    /// TIM1_TRGO event
+    Tim1Trgo = 0b1001,
+    /// TIM1_TRGO2 event
+    Tim1Trgo2 = 0b1010,
+    /// TIM2_TRGO event
+    Tim2Trgo = 0b1011,
+    /// TIM6_TRGO event
+    Tim6Trgo = 0b1101,
+    /// TIM15_TRGO event
+    Tim15Trgo = 0b1110,
+}
+
+/// Which edge of the external trigger starts a conversion.
+///
+/// This is the `ADC_CFGR.EXTEN` field. Use
+/// [`Adc::disable_external_trigger`] to return to software-started conversions.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum TriggerEdge {
+    Rising = 0b01,
+    Falling = 0b10,
+    Both = 0b11,
+}
+
 #[derive(PartialEq, PartialOrd, Clone, Copy)]
 pub enum Sequence {
     One = 0,
@@ -664,6 +710,59 @@ macro_rules! adc {
         adc!(@no_vts: $adc_type => ($common_type));
     };
 
+    (@external_trigger: ADC1) => {
+        adc!(@external_trigger_impl);
+    };
+
+    (@external_trigger: ADC2) => {
+        adc!(@external_trigger_impl);
+    };
+
+    (@external_trigger: $adc_type:ident) => {};
+
+    (@external_trigger_impl) => {
+        /// Configures a hardware trigger for regular conversions.
+        ///
+        /// Calling [`start_conversion`](Self::start_conversion) then arms the
+        /// regular group. A selected trigger starts the configured sequence if
+        /// the ADC is idle; triggers received during a conversion are ignored.
+        /// Ensure that the trigger period is longer than the sequence conversion
+        /// time.
+        ///
+        /// Panics if a regular conversion is armed or in progress, because
+        /// `EXTSEL` and `EXTEN` may be written only while `ADSTART = 0`.
+        #[inline]
+        pub fn configure_external_trigger(
+            &mut self,
+            trigger: ExternalTrigger,
+            edge: TriggerEdge,
+        ) {
+            assert!(
+                !self.is_converting(),
+                "EXTSEL/EXTEN are writable only while ADSTART = 0"
+            );
+            self.adc.cfgr.modify(|_, w| unsafe {
+                // SAFETY: the enums contain only documented field encodings.
+                w.extsel().bits(trigger as u8).exten().bits(edge as u8)
+            });
+        }
+
+        /// Returns the ADC to software-started conversions.
+        ///
+        /// Panics if a regular conversion is armed or in progress, because
+        /// `EXTEN` may be written only while `ADSTART = 0`.
+        #[inline]
+        pub fn disable_external_trigger(&mut self) {
+            assert!(
+                !self.is_converting(),
+                "EXTEN is writable only while ADSTART = 0"
+            );
+            self.adc
+                .cfgr
+                .modify(|_, w| unsafe { w.exten().bits(0b00) });
+        }
+    };
+
     ($($adc_type:ident => ($constructor_fn_name:ident, $common_type:ident)),+ $(,)?) => {
         $(
             impl Adc<pac::$adc_type> {
@@ -723,6 +822,7 @@ macro_rules! adc {
                 }
 
                 adc!(@additionals: $adc_type => ($common_type));
+                adc!(@external_trigger: $adc_type);
 
                 /// Check if the ADC is enabled.
                 #[inline]
@@ -862,6 +962,35 @@ macro_rules! adc {
                 #[inline]
                 pub fn is_converting(&self) -> bool {
                     self.adc.cr.read().adstart().bit_is_set()
+                }
+
+                /// Stops any ongoing regular conversion and waits for the ADC to
+                /// become idle.
+                ///
+                /// Returns once `ADSTART` has cleared, after which the trigger and
+                /// sequence configuration may be changed again.
+                #[inline]
+                pub fn stop_conversion(&mut self) {
+                    if self.is_converting() {
+                        self.adc.cr.modify(|_, w| w.adstp().set_bit());
+                        while self.adc.cr.read().adstart().bit_is_set() {}
+                    }
+                }
+
+                /// Selects how `ADC_DR` is handled when an overrun occurs.
+                ///
+                /// Passing `false` preserves the unread value; passing `true`
+                /// overwrites it with the new conversion result.
+                ///
+                /// Panics if a regular conversion is armed or in progress, because
+                /// `OVRMOD` may be written only while `ADSTART = 0`.
+                #[inline]
+                pub fn set_overrun_overwrite(&mut self, overwrite: bool) {
+                    assert!(
+                        !self.is_converting(),
+                        "OVRMOD is writable only while ADSTART = 0"
+                    );
+                    self.adc.cfgr.modify(|_, w| w.ovrmod().bit(overwrite));
                 }
 
                 #[inline]
