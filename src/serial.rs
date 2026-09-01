@@ -520,7 +520,7 @@ macro_rules! hal {
                         // NOTE(unsafe) atomic write to stateless register
                         // NOTE(write_volatile) 8-bit write that's not possible through the svd2rust API
                         unsafe {
-                            ptr::write_volatile(&(*pac::$USARTX::ptr()).tdr as *const _ as *mut _, byte)
+                            ptr::write_volatile((*pac::$USARTX::ptr()).tdr.as_ptr() as *mut u8, byte)
                         }
                         Ok(())
                     } else {
