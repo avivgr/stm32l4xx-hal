@@ -161,6 +161,10 @@ name = "irq_button"
 required-features = ["rt"]
 
 [[example]]
+name = "comp2_stop2"
+required-features = ["rt", "stm32l432"]
+
+[[example]]
 name = "qspi"
 required-features = ["rt", "stm32l476"] # L433/43 have no QSPI peripheral and are highly likely to be used
 

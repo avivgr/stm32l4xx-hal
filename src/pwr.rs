@@ -46,6 +46,22 @@ pub struct Pwr {
 }
 
 impl Pwr {
+    /// Enters Stop 2 mode and returns after a wakeup interrupt.
+    ///
+    /// Stop 2 powers down the PLL and high-speed oscillators. The caller must
+    /// restore its clock tree before using peripherals whose timing depends on
+    /// the pre-sleep clocks. Peripheral and DMA quiescing is also the caller's
+    /// responsibility.
+    pub fn stop2(&mut self, scb: &mut SCB) {
+        // Stop 2 mode selection, RM0394 PWR_CR1.LPMS.
+        unsafe { self.cr1.reg().modify(|_, w| w.lpms().bits(0b010)) };
+        scb.set_sleepdeep();
+        cortex_m::asm::dsb();
+        cortex_m::asm::wfi();
+        // A later ordinary WFI must not accidentally enter deep sleep.
+        scb.clear_sleepdeep();
+    }
+
     /// Configures dynamic voltage regulator range
     ///
     /// Will panic if low-power range is selected for higher system clock
