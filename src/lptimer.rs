@@ -126,12 +126,12 @@ macro_rules! hal {
 
             #[inline(always)]
             fn set_enable(&mut self, enabled: bool) {
-                self.lptim.cr.modify(|_, w| w.enable().bit(enabled));
+                self.lptim.cr().modify(|_, w| w.enable().bit(enabled));
             }
 
             #[inline(always)]
             fn start_continuous_mode(&mut self) {
-                self.lptim.cr.modify(|_, w| w.cntstrt().set_bit());
+                self.lptim.cr().modify(|_, w| w.cntstrt().set_bit());
             }
 
             /// Consume the LPTIM and produce a LowPowerTimer that encapsulates
@@ -170,7 +170,7 @@ macro_rules! hal {
                     // This operation is sound, as it is an atomic memory access
                     // that does not modify the memory/read value
                     ClockSource::HSI16 => {
-                        assert!(unsafe { (&*RCC::ptr()).cr.read().hsion().bit_is_set() })
+                        assert!(unsafe { (&*RCC::ptr()).cr().read().hsion().bit_is_set() })
                     }
                     _ => {}
                 }
@@ -185,7 +185,7 @@ macro_rules! hal {
 
                 // This operation is sound as `PreScaler as u8` (which is the "unsafe" part) only
                 // produces valid values
-                lptim.cfgr.modify(|_, w| unsafe {
+                lptim.cfgr().modify(|_, w| unsafe {
                     w.enc()
                         .clear_bit()
                         .countmode()
@@ -210,7 +210,7 @@ macro_rules! hal {
             pub fn listen(&mut self, event: Event) {
                 // LPTIM_IER may only be modified when LPTIM is disabled
                 self.disable();
-                self.lptim.ier.modify(|_, w| match event {
+                self.lptim.ier().modify(|_, w| match event {
                     Event::CompareMatch => w.cmpmie().set_bit(),
                     Event::AutoReloadMatch => w.arrmie().set_bit(),
                 });
@@ -222,7 +222,7 @@ macro_rules! hal {
             pub fn unlisten(&mut self, event: Event) {
                 // LPTIM_IER may only be modified when LPTIM is disabled
                 self.disable();
-                self.lptim.ier.modify(|_, w| match event {
+                self.lptim.ier().modify(|_, w| match event {
                     Event::CompareMatch => w.cmpmie().clear_bit(),
                     Event::AutoReloadMatch => w.arrmie().clear_bit(),
                 });
@@ -237,7 +237,7 @@ macro_rules! hal {
             /// interrupt from looping eternally. This is not done in a single function to
             /// avoid using a mutable reference for an operation that does not require it.
             pub fn is_event_triggered(&self, event: Event) -> bool {
-                let reg_val = self.lptim.isr.read();
+                let reg_val = self.lptim.isr().read();
                 match event {
                     Event::CompareMatch => reg_val.cmpm().bit_is_set(),
                     Event::AutoReloadMatch => reg_val.arrm().bit_is_set(),
@@ -246,7 +246,7 @@ macro_rules! hal {
 
             /// Clear the interrupt flag for the specified event
             pub fn clear_event_flag(&mut self, event: Event) {
-                self.lptim.icr.write(|w| match event {
+                self.lptim.icr().write(|w| match event {
                     Event::CompareMatch => w.cmpmcf().set_bit(),
                     Event::AutoReloadMatch => w.arrmcf().set_bit(),
                 });
@@ -256,16 +256,16 @@ macro_rules! hal {
             #[inline]
             pub fn set_compare_match(&mut self, value: u16) {
                 // clear compare register update ok flag
-                self.lptim.icr.write(|w| w.cmpokcf().set_bit());
+                self.lptim.icr().write(|w| w.cmpokcf().set_bit());
 
                 // This operation is sound as compare_value is a u16, and there are 16 writeable bits
                 // Additionally, the LPTIM peripheral will always be in the enabled state when this code is called
-                self.lptim.cmp.write(|w| unsafe { w.bits(value as u32) });
+                self.lptim.cmp().write(|w| unsafe { w.bits(value as u32) });
 
                 // wait for compare register update ok interrupt to be signalled
                 // (see RM0394 Rev 4, sec 30.4.10 for further explanation and
                 // sec. 30.7.1, Bit 4 for register field description)
-                while self.lptim.isr.read().cmpok().bit_is_clear() {}
+                while self.lptim.isr().read().cmpok().bit_is_clear() {}
             }
 
             /// Set auto reload register
@@ -273,31 +273,31 @@ macro_rules! hal {
             #[inline(always)]
             pub fn set_autoreload(&mut self, arr_value: u16) {
                 // clear autoreload register OK interrupt flag
-                self.lptim.icr.write(|w| w.arrokcf().set_bit());
+                self.lptim.icr().write(|w| w.arrokcf().set_bit());
 
                 // Write autoreload value
                 // This operation is sound as arr_value is a u16, and there are 16 writeable bits
                 self.lptim
-                    .arr
+                    .arr()
                     .write(|w| unsafe { w.bits(arr_value as u32) });
 
                 // wait for autoreload write ok interrupt to be signalled
                 // (see RM0394 Rev 4, sec 30.4.10 for further explanation and
                 // sec. 30.7.1, Bit 4 for register field description)
-                while self.lptim.isr.read().arrok().bit_is_clear() {}
+                while self.lptim.isr().read().arrok().bit_is_clear() {}
             }
 
             /// Get the current counter value for this LowPowerTimer
             #[inline]
             pub fn get_counter(&self) -> u16 {
-                self.lptim.cnt.read().bits() as u16
+                self.lptim.cnt().read().bits() as u16
             }
 
             /// Get the value of the ARR register for this
             /// LowPowerTimer
             #[inline]
             pub fn get_arr(&self) -> u16 {
-                self.lptim.arr.read().bits() as u16
+                self.lptim.arr().read().bits() as u16
             }
 
             pub fn pause(&mut self) {

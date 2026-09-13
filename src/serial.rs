@@ -264,9 +264,9 @@ macro_rules! hal {
                     <pac::$USARTX>::reset(apb);
 
                     // Reset other registers to disable advanced USART features
-                    usart.cr1.reset();
-                    usart.cr2.reset();
-                    usart.cr3.reset();
+                    usart.cr1().reset();
+                    usart.cr2().reset();
+                    usart.cr3().reset();
 
                     // Configure baud rate
                     match config.oversampling {
@@ -277,38 +277,38 @@ macro_rules! hal {
                             let lower = (uartdiv & 0xf) >> 1;
                             let brr = (uartdiv & !0xf) | lower;
 
-                            usart.cr1.modify(|_, w| w.over8().set_bit());
-                            usart.brr.write(|w| unsafe { w.bits(brr) });
+                            usart.cr1().modify(|_, w| w.over8().set_bit());
+                            usart.brr().write(|w| unsafe { w.bits(brr) });
                         }
                         Oversampling::Over16 => {
                             let brr = clocks.$pclkX().raw() / config.baudrate.0;
                             assert!(brr >= 16, "impossible baud rate");
 
-                            usart.brr.write(|w| unsafe { w.bits(brr) });
+                            usart.brr().write(|w| unsafe { w.bits(brr) });
                         }
                     }
 
                     if let Some(val) = config.receiver_timeout {
-                        usart.rtor.modify(|_, w| w.rto().bits(val));
+                        usart.rtor().modify(|_, w| w.rto().bits(val));
                     }
 
                     // enable DMA transfers
-                    usart.cr3.modify(|_, w| w.dmat().set_bit().dmar().set_bit());
+                    usart.cr3().modify(|_, w| w.dmat().set_bit().dmar().set_bit());
 
                     // Configure hardware flow control (CTS/RTS or RS485 Driver Enable)
                     if PINS::FLOWCTL {
-                        usart.cr3.modify(|_, w| w.rtse().set_bit().ctse().set_bit());
+                        usart.cr3().modify(|_, w| w.rtse().set_bit().ctse().set_bit());
                     } else if PINS::DEM {
-                        usart.cr3.modify(|_, w| w.dem().set_bit());
+                        usart.cr3().modify(|_, w| w.dem().set_bit());
 
                         // Pre/post driver enable set conservative to the max time
-                        usart.cr1.modify(|_, w| w.deat().bits(0b1111).dedt().bits(0b1111));
+                        usart.cr1().modify(|_, w| w.deat().bits(0b1111).dedt().bits(0b1111));
                     } else {
-                        usart.cr3.modify(|_, w| w.rtse().clear_bit().ctse().clear_bit());
+                        usart.cr3().modify(|_, w| w.rtse().clear_bit().ctse().clear_bit());
                     }
 
                     // Enable One bit sampling method
-                    usart.cr3.modify(|_, w| {
+                    usart.cr3().modify(|_, w| {
                         if config.onebit_sampling {
                             w.onebit().set_bit();
                         }
@@ -335,7 +335,7 @@ macro_rules! hal {
                         Parity::ParityEven => (true, true, false),
                         Parity::ParityOdd => (true, true, true),
                     };
-                    usart.cr1.modify(|_r, w| {
+                    usart.cr1().modify(|_r, w| {
                         w
                             .m0().bit(word_length)
                             .ps().bit(parity)
@@ -349,7 +349,7 @@ macro_rules! hal {
                         StopBits::STOP2 => 0b10,
                         StopBits::STOP1P5 => 0b11,
                     };
-                    usart.cr2.modify(|_r, w| {
+                    usart.cr2().modify(|_r, w| {
                         w.stop().bits(stop_bits);
 
                         // Setup character match (if requested)
@@ -369,7 +369,7 @@ macro_rules! hal {
                     // RE: enable receiver
                     // TE: enable transceiver
                     usart
-                        .cr1
+                        .cr1()
                         .modify(|_, w| w.ue().set_bit().re().set_bit().te().set_bit());
 
                     Serial { usart, pins }
@@ -379,19 +379,19 @@ macro_rules! hal {
                 pub fn listen(&mut self, event: Event) {
                     match event {
                         Event::Rxne => {
-                            self.usart.cr1.modify(|_, w| w.rxneie().set_bit())
+                            self.usart.cr1().modify(|_, w| w.rxneie().set_bit())
                         },
                         Event::Txe => {
-                            self.usart.cr1.modify(|_, w| w.txeie().set_bit())
+                            self.usart.cr1().modify(|_, w| w.txeie().set_bit())
                         },
                         Event::Idle => {
-                            self.usart.cr1.modify(|_, w| w.idleie().set_bit())
+                            self.usart.cr1().modify(|_, w| w.idleie().set_bit())
                         },
                         Event::CharacterMatch => {
-                            self.usart.cr1.modify(|_, w| w.cmie().set_bit())
+                            self.usart.cr1().modify(|_, w| w.cmie().set_bit())
                         },
                         Event::ReceiverTimeout => {
-                            self.usart.cr1.modify(|_, w| w.rtoie().set_bit())
+                            self.usart.cr1().modify(|_, w| w.rtoie().set_bit())
                         },
                     }
                 }
@@ -410,19 +410,19 @@ macro_rules! hal {
                 pub fn unlisten(&mut self, event: Event) {
                     match event {
                         Event::Rxne => {
-                            self.usart.cr1.modify(|_, w| w.rxneie().clear_bit())
+                            self.usart.cr1().modify(|_, w| w.rxneie().clear_bit())
                         },
                         Event::Txe => {
-                            self.usart.cr1.modify(|_, w| w.txeie().clear_bit())
+                            self.usart.cr1().modify(|_, w| w.txeie().clear_bit())
                         },
                         Event::Idle => {
-                            self.usart.cr1.modify(|_, w| w.idleie().clear_bit())
+                            self.usart.cr1().modify(|_, w| w.idleie().clear_bit())
                         },
                         Event::CharacterMatch => {
-                            self.usart.cr1.modify(|_, w| w.cmie().clear_bit())
+                            self.usart.cr1().modify(|_, w| w.cmie().clear_bit())
                         },
                         Event::ReceiverTimeout => {
-                            self.usart.cr1.modify(|_, w| w.rtoie().clear_bit())
+                            self.usart.cr1().modify(|_, w| w.rtoie().clear_bit())
                         },
                     }
                 }
@@ -463,12 +463,12 @@ macro_rules! hal {
                     self.check_for_error()?;
 
                     // NOTE(unsafe) atomic read with no side effects
-                    let isr = unsafe { (*pac::$USARTX::ptr()).isr.read() };
+                    let isr = unsafe { (*pac::$USARTX::ptr()).isr().read() };
 
                     if isr.rxne().bit_is_set() {
                         // NOTE(read_volatile) see `write_volatile` below
                         return Ok(unsafe {
-                            ptr::read_volatile(&(*pac::$USARTX::ptr()).rdr as *const _ as *const _)
+                            ptr::read_volatile(&(*pac::$USARTX::ptr()).rdr() as *const _ as *const _)
                         });
                     }
 
@@ -503,7 +503,7 @@ macro_rules! hal {
 
                 fn flush(&mut self) -> nb::Result<(), Error> {
                     // NOTE(unsafe) atomic read with no side effects
-                    let isr = unsafe { (*pac::$USARTX::ptr()).isr.read() };
+                    let isr = unsafe { (*pac::$USARTX::ptr()).isr().read() };
 
                     if isr.tc().bit_is_set() {
                         Ok(())
@@ -514,13 +514,13 @@ macro_rules! hal {
 
                 fn write(&mut self, byte: u8) -> nb::Result<(), Error> {
                     // NOTE(unsafe) atomic read with no side effects
-                    let isr = unsafe { (*pac::$USARTX::ptr()).isr.read() };
+                    let isr = unsafe { (*pac::$USARTX::ptr()).isr().read() };
 
                     if isr.txe().bit_is_set() {
                         // NOTE(unsafe) atomic write to stateless register
                         // NOTE(write_volatile) 8-bit write that's not possible through the svd2rust API
                         unsafe {
-                            ptr::write_volatile(&(*pac::$USARTX::ptr()).tdr as *const _ as *mut _, byte)
+                            ptr::write_volatile(&(*pac::$USARTX::ptr()).tdr() as *const _ as *mut _, byte)
                         }
                         Ok(())
                     } else {
@@ -580,8 +580,8 @@ macro_rules! hal {
                 /// `read` call unimpeded.
                 pub fn check_for_error(&mut self) -> Result<(), Error> {
                     // NOTE(unsafe): Only used for atomic access.
-                    let isr = unsafe { (*pac::$USARTX::ptr()).isr.read() };
-                    let icr = unsafe { &(*pac::$USARTX::ptr()).icr };
+                    let isr = unsafe { (*pac::$USARTX::ptr()).isr().read() };
+                    let icr = unsafe { &(*pac::$USARTX::ptr()).icr() };
 
                     if isr.pe().bit_is_set() {
                         icr.write(|w| w.pecf().clear());
@@ -606,8 +606,8 @@ macro_rules! hal {
                 /// Checks to see if the USART peripheral has detected an idle line and clears
                 /// the flag
                 pub fn is_idle(&mut self, clear: bool) -> bool {
-                    let isr = unsafe { &(*pac::$USARTX::ptr()).isr.read() };
-                    let icr = unsafe { &(*pac::$USARTX::ptr()).icr };
+                    let isr = unsafe { &(*pac::$USARTX::ptr()).isr().read() };
+                    let icr = unsafe { &(*pac::$USARTX::ptr()).icr() };
 
                     if isr.idle().bit_is_set() {
                         if clear {
@@ -623,8 +623,8 @@ macro_rules! hal {
                 /// Checks to see if the USART peripheral has detected an receiver timeout and
                 /// clears the flag
                 pub fn is_receiver_timeout(&mut self, clear: bool) -> bool {
-                    let isr = unsafe { &(*pac::$USARTX::ptr()).isr.read() };
-                    let icr = unsafe { &(*pac::$USARTX::ptr()).icr };
+                    let isr = unsafe { &(*pac::$USARTX::ptr()).isr().read() };
+                    let icr = unsafe { &(*pac::$USARTX::ptr()).icr() };
 
                     if isr.rtof().bit_is_set() {
                         if clear {
@@ -639,8 +639,8 @@ macro_rules! hal {
                 /// Checks to see if the USART peripheral has detected an character match and
                 /// clears the flag
                 pub fn check_character_match(&mut self, clear: bool) -> bool {
-                    let isr = unsafe { &(*pac::$USARTX::ptr()).isr.read() };
-                    let icr = unsafe { &(*pac::$USARTX::ptr()).icr };
+                    let isr = unsafe { &(*pac::$USARTX::ptr()).isr().read() };
+                    let icr = unsafe { &(*pac::$USARTX::ptr()).icr() };
 
                     if isr.cmf().bit_is_set() {
                         if clear {
@@ -715,7 +715,7 @@ macro_rules! hal {
                 {
                     let (ptr, len) = unsafe { buffer.static_write_buffer() };
                     self.channel.set_peripheral_address(
-                        unsafe { &(*pac::$USARTX::ptr()).rdr as *const _ as u32 },
+                        unsafe { &(*pac::$USARTX::ptr()).rdr() as *const _ as u32 },
                         false,
                     );
                     self.channel.set_memory_address(ptr as u32, true);
@@ -770,7 +770,7 @@ macro_rules! hal {
 
                     // Setup DMA transfer
                     let buf = &*buffer;
-                    self.channel.set_peripheral_address(&usart.rdr as *const _ as u32, false);
+                    self.channel.set_peripheral_address(&usart.rdr() as *const _ as u32, false);
                     self.channel.set_memory_address(unsafe { buf.buffer_address_for_dma() } as u32, true);
                     self.channel.set_transfer_length(buf.max_len() as u16);
 
@@ -802,7 +802,7 @@ macro_rules! hal {
 
                     self.channel.start();
 
-                    FrameReader::new(buffer, self, usart.cr2.read().add().bits())
+                    FrameReader::new(buffer, self, usart.cr2().read().add().bits())
                 }
             }
 
@@ -817,7 +817,7 @@ macro_rules! hal {
                     let usart = unsafe{ &(*pac::$USARTX::ptr()) };
 
                     // Setup DMA
-                    self.channel.set_peripheral_address(&usart.tdr as *const _ as u32, false);
+                    self.channel.set_peripheral_address(&usart.tdr() as *const _ as u32, false);
 
                     // Tell DMA to request from serial
                     self.channel.set_request_line($dmatxsel).unwrap();

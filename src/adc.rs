@@ -67,7 +67,7 @@ impl AdcCommonCcr {
     #[inline]
     fn read(&self) -> pac::adc_common::ccr::R {
         let adc_common = unsafe { &*pac::ADC_COMMON::ptr() };
-        adc_common.ccr.read()
+        adc_common.ccr().read()
     }
 
     #[inline]
@@ -80,7 +80,7 @@ impl AdcCommonCcr {
     {
         cortex_m::interrupt::free(|_| {
             let adc_common = unsafe { &*pac::ADC_COMMON::ptr() };
-            adc_common.ccr.modify(|r, w| f(r, w))
+            adc_common.ccr().modify(|r, w| f(r, w))
         })
     }
 }
@@ -331,10 +331,10 @@ where
         };
 
         adc.adc
-            .cfgr
+            .cfgr()
             .modify(|_, w| w.dmaen().bit(enable).dmacfg().bit(circular));
 
-        channel.set_peripheral_address(&adc.adc.dr as *const _ as u32, false);
+        channel.set_peripheral_address(&adc.adc.dr() as *const _ as u32, false);
 
         // SAFETY: since the length of BUFFER is known to be `N`, we are allowed
         // to perform N transfers into said buffer
@@ -687,8 +687,8 @@ macro_rules! adc {
 
                     // Initialize the ADC, according to the STM32L4xx Reference Manual,
                     // section 16.4.6.
-                    adc.cr.write(|w| w.deeppwd().clear_bit()); // exit deep-power-down mode
-                    adc.cr.modify(|_, w| w.advregen().set_bit()); // enable internal voltage regulator
+                    adc.cr().write(|w| w.deeppwd().clear_bit()); // exit deep-power-down mode
+                    adc.cr().modify(|_, w| w.advregen().set_bit()); // enable internal voltage regulator
 
                     // According to the STM32L4xx Reference Manual, section 16.4.6, we need
                     // to wait for T_ADCVREG_STUP after enabling the internal voltage
@@ -697,14 +697,14 @@ macro_rules! adc {
                     delay.delay_us(25);
 
                     // Calibration procedure according to section 16.4.8.
-                    adc.cr.modify(|_, w| {
+                    adc.cr().modify(|_, w| {
                         w.adcal().set_bit(); // start calibration
                         w.adcaldif().clear_bit(); // single-ended mode
 
                         w
                     });
 
-                    while adc.cr.read().adcal().bit_is_set() {}
+                    while adc.cr().read().adcal().bit_is_set() {}
 
                     // We need to wait 4 ADC clock after ADCAL goes low, 1 us is more than enough
                     delay.delay_us(1);
@@ -727,7 +727,7 @@ macro_rules! adc {
                 /// Check if the ADC is enabled.
                 #[inline]
                 pub fn is_enabled(&self) -> bool {
-                    self.adc.cr.read().aden().bit_is_set()
+                    self.adc.cr().read().aden().bit_is_set()
                 }
 
                 /// Enable the ADC.
@@ -735,15 +735,15 @@ macro_rules! adc {
                 pub fn enable(&mut self) {
                     if !self.is_enabled() {
                         // Make sure bits are off
-                        while self.adc.cr.read().addis().bit_is_set() {}
+                        while self.adc.cr().read().addis().bit_is_set() {}
 
                         // Clear ADRDY by setting it (See Reference Manual section 1.16.1)
-                        self.adc.isr.modify(|_, w| w.adrdy().set_bit());
-                        self.adc.cr.modify(|_, w| w.aden().set_bit());
-                        while self.adc.isr.read().adrdy().bit_is_clear() {}
+                        self.adc.isr().modify(|_, w| w.adrdy().set_bit());
+                        self.adc.cr().modify(|_, w| w.aden().set_bit());
+                        while self.adc.isr().read().adrdy().bit_is_clear() {}
 
                         // Configure ADC
-                        self.adc.cfgr.modify(|_, w| {
+                        self.adc.cfgr().modify(|_, w| {
                             // This is sound, as all `Resolution` values are valid for this
                             // field.
                             unsafe { w.res().bits(self.resolution as u8) }
@@ -754,7 +754,7 @@ macro_rules! adc {
                 /// Disable the ADC.
                 #[inline]
                 pub fn disable(&mut self) {
-                    self.adc.cr.modify(|_, w| w.addis().set_bit());
+                    self.adc.cr().modify(|_, w| w.addis().set_bit());
                 }
 
                 /// Returns the current sample stored in the ADC data register.
@@ -762,7 +762,7 @@ macro_rules! adc {
                 pub fn current_sample(&self) -> u16 {
                     // Sound, as bits 31:16 are reserved, read-only and 0 in ADC_DR
                     // TODO: Switch to using `rdata` once https://github.com/stm32-rs/stm32-rs/pull/723 is released.
-                    self.adc.dr.read().bits() as u16
+                    self.adc.dr().read().bits() as u16
                 }
 
                 /// Configure the channel for a specific step in the sequence.
@@ -784,22 +784,22 @@ macro_rules! adc {
                     unsafe {
                         // This is sound as channel() always returns a valid channel number
                         match sequence {
-                            Sequence::One => self.adc.sqr1.modify(|_, w| w.sq1().bits(channel_bits)),
-                            Sequence::Two => self.adc.sqr1.modify(|_, w| w.sq2().bits(channel_bits)),
-                            Sequence::Three => self.adc.sqr1.modify(|_, w| w.sq3().bits(channel_bits)),
-                            Sequence::Four => self.adc.sqr1.modify(|_, w| w.sq4().bits(channel_bits)),
-                            Sequence::Five => self.adc.sqr2.modify(|_, w| w.sq5().bits(channel_bits)),
-                            Sequence::Six => self.adc.sqr2.modify(|_, w| w.sq6().bits(channel_bits)),
-                            Sequence::Seven => self.adc.sqr2.modify(|_, w| w.sq7().bits(channel_bits)),
-                            Sequence::Eight => self.adc.sqr2.modify(|_, w| w.sq8().bits(channel_bits)),
-                            Sequence::Nine => self.adc.sqr2.modify(|_, w| w.sq9().bits(channel_bits)),
-                            Sequence::Ten => self.adc.sqr3.modify(|_, w| w.sq10().bits(channel_bits)),
-                            Sequence::Eleven => self.adc.sqr3.modify(|_, w| w.sq11().bits(channel_bits)),
-                            Sequence::Twelve => self.adc.sqr3.modify(|_, w| w.sq12().bits(channel_bits)),
-                            Sequence::Thirteen => self.adc.sqr3.modify(|_, w| w.sq13().bits(channel_bits)),
-                            Sequence::Fourteen => self.adc.sqr3.modify(|_, w| w.sq14().bits(channel_bits)),
-                            Sequence::Fifteen => self.adc.sqr4.modify(|_, w| w.sq15().bits(channel_bits)),
-                            Sequence::Sixteen => self.adc.sqr4.modify(|_, w| w.sq16().bits(channel_bits)),
+                            Sequence::One => self.adc.sqr1().modify(|_, w| w.sq1().bits(channel_bits)),
+                            Sequence::Two => self.adc.sqr1().modify(|_, w| w.sq2().bits(channel_bits)),
+                            Sequence::Three => self.adc.sqr1().modify(|_, w| w.sq3().bits(channel_bits)),
+                            Sequence::Four => self.adc.sqr1().modify(|_, w| w.sq4().bits(channel_bits)),
+                            Sequence::Five => self.adc.sqr2().modify(|_, w| w.sq5().bits(channel_bits)),
+                            Sequence::Six => self.adc.sqr2().modify(|_, w| w.sq6().bits(channel_bits)),
+                            Sequence::Seven => self.adc.sqr2().modify(|_, w| w.sq7().bits(channel_bits)),
+                            Sequence::Eight => self.adc.sqr2().modify(|_, w| w.sq8().bits(channel_bits)),
+                            Sequence::Nine => self.adc.sqr2().modify(|_, w| w.sq9().bits(channel_bits)),
+                            Sequence::Ten => self.adc.sqr3().modify(|_, w| w.sq10().bits(channel_bits)),
+                            Sequence::Eleven => self.adc.sqr3().modify(|_, w| w.sq11().bits(channel_bits)),
+                            Sequence::Twelve => self.adc.sqr3().modify(|_, w| w.sq12().bits(channel_bits)),
+                            Sequence::Thirteen => self.adc.sqr3().modify(|_, w| w.sq13().bits(channel_bits)),
+                            Sequence::Fourteen => self.adc.sqr3().modify(|_, w| w.sq14().bits(channel_bits)),
+                            Sequence::Fifteen => self.adc.sqr4().modify(|_, w| w.sq15().bits(channel_bits)),
+                            Sequence::Sixteen => self.adc.sqr4().modify(|_, w| w.sq16().bits(channel_bits)),
                         }
                     }
 
@@ -815,14 +815,14 @@ macro_rules! adc {
                 /// Get the configured sequence length (= `actual sequence length - 1`)
                 #[inline]
                 pub(crate) fn get_sequence_length(&self) -> u8 {
-                    self.adc.sqr1.read().l().bits()
+                    self.adc.sqr1().read().l().bits()
                 }
 
                 /// Private: length must be `actual sequence length - 1`, so not API-friendly.
                 /// Use [`Adc::reset_sequence`] and [`Adc::configure_sequence`] instead
                 #[inline]
                 fn set_sequence_length(&mut self, length: u8) {
-                    self.adc.sqr1.modify(|_, w| unsafe { w.l().bits(length) });
+                    self.adc.sqr1().modify(|_, w| unsafe { w.l().bits(length) });
                 }
 
                 /// Reset the sequence length to 1
@@ -831,24 +831,24 @@ macro_rules! adc {
                 /// changes the sequence length
                 #[inline]
                 pub fn reset_sequence(&mut self) {
-                    self.adc.sqr1.modify(|_, w| unsafe { w.l().bits(0b0000) })
+                    self.adc.sqr1().modify(|_, w| unsafe { w.l().bits(0b0000) })
                 }
 
                 #[inline]
                 pub fn has_completed_conversion(&self) -> bool {
-                    self.adc.isr.read().eoc().bit_is_set()
+                    self.adc.isr().read().eoc().bit_is_set()
                 }
 
                 #[inline]
                 pub fn has_completed_sequence(&self) -> bool {
-                    self.adc.isr.read().eos().bit_is_set()
+                    self.adc.isr().read().eos().bit_is_set()
                 }
 
                 #[inline]
                 pub fn clear_end_flags(&mut self) {
                     // EOS and EOC are reset by setting them (See reference manual section 16.6.1)
                     self.adc
-                        .isr
+                        .isr()
                         .modify(|_, w| w.eos().set_bit().eoc().set_bit());
                 }
 
@@ -856,17 +856,17 @@ macro_rules! adc {
                 pub fn start_conversion(&mut self) {
                     self.enable();
                     self.clear_end_flags();
-                    self.adc.cr.modify(|_, w| w.adstart().set_bit());
+                    self.adc.cr().modify(|_, w| w.adstart().set_bit());
                 }
 
                 #[inline]
                 pub fn is_converting(&self) -> bool {
-                    self.adc.cr.read().adstart().bit_is_set()
+                    self.adc.cr().read().adstart().bit_is_set()
                 }
 
                 #[inline]
                 pub fn listen(&mut self, event: Event) {
-                    self.adc.ier.modify(|_, w| match event {
+                    self.adc.ier().modify(|_, w| match event {
                         Event::EndOfRegularSequence => w.eosie().set_bit(),
                         Event::EndOfRegularConversion => w.eocie().set_bit(),
                     });
@@ -874,7 +874,7 @@ macro_rules! adc {
 
                 #[inline]
                 pub fn unlisten(&mut self, event: Event) {
-                    self.adc.ier.modify(|_, w| match event {
+                    self.adc.ier().modify(|_, w| match event {
                         Event::EndOfRegularSequence => w.eosie().clear_bit(),
                         Event::EndOfRegularConversion => w.eocie().clear_bit(),
                     });
@@ -890,25 +890,25 @@ adc_pins!(
     // “Table 25. Embedded internal voltage reference” in the STM32L496xx datasheet states that
     // the sample time needs to be at least 4 us. With 640.5 ADC cycles at 80 MHz, we have a
     // minimum of 8 us, leaving some headroom.
-    Vref              => (ADC1, 0,  smpr1, smp0, SampleTime::Cycles640_5),
-    gpio::PC0<Analog> => (ADC1, 1,  smpr1, smp1),
-    gpio::PC1<Analog> => (ADC1, 2,  smpr1, smp2),
-    gpio::PC2<Analog> => (ADC1, 3,  smpr1, smp3),
-    gpio::PC3<Analog> => (ADC1, 4,  smpr1, smp4),
-    gpio::PA0<Analog> => (ADC1, 5,  smpr1, smp5),
-    gpio::PA1<Analog> => (ADC1, 6,  smpr1, smp6),
-    gpio::PA2<Analog> => (ADC1, 7,  smpr1, smp7),
-    gpio::PA3<Analog> => (ADC1, 8,  smpr1, smp8),
-    gpio::PA4<Analog> => (ADC1, 9,  smpr1, smp9),
-    gpio::PA5<Analog> => (ADC1, 10, smpr2, smp10),
-    gpio::PA6<Analog> => (ADC1, 11, smpr2, smp11),
-    gpio::PA7<Analog> => (ADC1, 12, smpr2, smp12),
-    gpio::PC4<Analog> => (ADC1, 13, smpr2, smp13),
-    gpio::PC5<Analog> => (ADC1, 14, smpr2, smp14),
-    gpio::PB0<Analog> => (ADC1, 15, smpr2, smp15),
-    gpio::PB1<Analog> => (ADC1, 16, smpr2, smp16),
-    Temperature       => (ADC1, 17, smpr2, smp17),
-    Vbat              => (ADC1, 18, smpr2, smp18),
+    Vref              => (ADC1, 0,  smpr1(), smp0, SampleTime::Cycles640_5),
+    gpio::PC0<Analog> => (ADC1, 1,  smpr1(), smp1),
+    gpio::PC1<Analog> => (ADC1, 2,  smpr1(), smp2),
+    gpio::PC2<Analog> => (ADC1, 3,  smpr1(), smp3),
+    gpio::PC3<Analog> => (ADC1, 4,  smpr1(), smp4),
+    gpio::PA0<Analog> => (ADC1, 5,  smpr1(), smp5),
+    gpio::PA1<Analog> => (ADC1, 6,  smpr1(), smp6),
+    gpio::PA2<Analog> => (ADC1, 7,  smpr1(), smp7),
+    gpio::PA3<Analog> => (ADC1, 8,  smpr1(), smp8),
+    gpio::PA4<Analog> => (ADC1, 9,  smpr1(), smp9),
+    gpio::PA5<Analog> => (ADC1, 10, smpr2(), smp10),
+    gpio::PA6<Analog> => (ADC1, 11, smpr2(), smp11),
+    gpio::PA7<Analog> => (ADC1, 12, smpr2(), smp12),
+    gpio::PC4<Analog> => (ADC1, 13, smpr2(), smp13),
+    gpio::PC5<Analog> => (ADC1, 14, smpr2(), smp14),
+    gpio::PB0<Analog> => (ADC1, 15, smpr2(), smp15),
+    gpio::PB1<Analog> => (ADC1, 16, smpr2(), smp16),
+    Temperature       => (ADC1, 17, smpr2(), smp17),
+    Vbat              => (ADC1, 18, smpr2(), smp18),
 );
 
 #[cfg(not(any(
@@ -938,22 +938,22 @@ adc!(ADC2 => (adc2, ADC_COMMON));
   feature = "stm32l4s9",
 )))]
 adc_pins!(
-    gpio::PC0<Analog> => (ADC2, 1,  smpr1, smp1),
-    gpio::PC1<Analog> => (ADC2, 2,  smpr1, smp2),
-    gpio::PC2<Analog> => (ADC2, 3,  smpr1, smp3),
-    gpio::PC3<Analog> => (ADC2, 4,  smpr1, smp4),
-    gpio::PA0<Analog> => (ADC2, 5,  smpr1, smp5),
-    gpio::PA1<Analog> => (ADC2, 6,  smpr1, smp6),
-    gpio::PA2<Analog> => (ADC2, 7,  smpr1, smp7),
-    gpio::PA3<Analog> => (ADC2, 8,  smpr1, smp8),
-    gpio::PA4<Analog> => (ADC2, 9,  smpr1, smp9),
-    gpio::PA5<Analog> => (ADC2, 10, smpr2, smp10),
-    gpio::PA6<Analog> => (ADC2, 11, smpr2, smp11),
-    gpio::PA7<Analog> => (ADC2, 12, smpr2, smp12),
-    gpio::PC4<Analog> => (ADC2, 13, smpr2, smp13),
-    gpio::PC5<Analog> => (ADC2, 14, smpr2, smp14),
-    gpio::PB0<Analog> => (ADC2, 15, smpr2, smp15),
-    gpio::PB1<Analog> => (ADC2, 16, smpr2, smp16),
+    gpio::PC0<Analog> => (ADC2, 1,  smpr1(), smp1),
+    gpio::PC1<Analog> => (ADC2, 2,  smpr1(), smp2),
+    gpio::PC2<Analog> => (ADC2, 3,  smpr1(), smp3),
+    gpio::PC3<Analog> => (ADC2, 4,  smpr1(), smp4),
+    gpio::PA0<Analog> => (ADC2, 5,  smpr1(), smp5),
+    gpio::PA1<Analog> => (ADC2, 6,  smpr1(), smp6),
+    gpio::PA2<Analog> => (ADC2, 7,  smpr1(), smp7),
+    gpio::PA3<Analog> => (ADC2, 8,  smpr1(), smp8),
+    gpio::PA4<Analog> => (ADC2, 9,  smpr1(), smp9),
+    gpio::PA5<Analog> => (ADC2, 10, smpr2(), smp10),
+    gpio::PA6<Analog> => (ADC2, 11, smpr2(), smp11),
+    gpio::PA7<Analog> => (ADC2, 12, smpr2(), smp12),
+    gpio::PC4<Analog> => (ADC2, 13, smpr2(), smp13),
+    gpio::PC5<Analog> => (ADC2, 14, smpr2(), smp14),
+    gpio::PB0<Analog> => (ADC2, 15, smpr2(), smp15),
+    gpio::PB1<Analog> => (ADC2, 16, smpr2(), smp16),
     // DAC1           => (ADC2, 17, smpr2, smp17),
     // DAC2           => (ADC2, 18, smpr2, smp18),
 );

@@ -75,13 +75,13 @@ macro_rules! hal {
                 #[allow(unused)] // Only used for DMA.
                 #[inline]
                 fn enable(&mut self) {
-                    self.spi.cr1.modify(|_, w| w.spe().set_bit());
+                    self.spi.cr1().modify(|_, w| w.spe().set_bit());
                 }
 
                 /// Disable the SPI peripheral.
                 #[inline]
                 fn disable(&mut self) {
-                    self.spi.cr1.modify(|_, w| w.spe().clear_bit());
+                    self.spi.cr1().modify(|_, w| w.spe().clear_bit());
                 }
             }
 
@@ -109,7 +109,7 @@ macro_rules! hal {
                     //        8-bit
                     // DS: 8-bit data size
                     // SSOE: Slave Select output disabled
-                    spi.cr2
+                    spi.cr2()
                         .write(|w| unsafe {
                             w.frxth().set_bit().ds().bits(0b111).ssoe().clear_bit()
                         });
@@ -126,7 +126,7 @@ macro_rules! hal {
                     // SSI: set nss high = master mode
                     // CRCEN: hardware CRC calculation disabled
                     // BIDIMODE: 2 line unidirectional (full duplex)
-                    spi.cr1.write(|w| unsafe {
+                    spi.cr1().write(|w| unsafe {
                         w.cpha()
                             .bit(mode.phase == Phase::CaptureOnSecondTransition)
                             .cpol()
@@ -170,7 +170,7 @@ macro_rules! hal {
                     // MSTR: master mode
                     // SSM: disable software slave management (NSS pin not free for other uses)
                     // SPE: SPI disabled
-                    spi.cr1.write(|w| {
+                    spi.cr1().write(|w| {
                         w.cpol()
                             .bit(mode.polarity == Polarity::IdleHigh)
                             .cpha()
@@ -190,25 +190,25 @@ macro_rules! hal {
                     // DS: 8-bit data size
                     // FRXTH: RXNE event is generated if the FIFO level is greater than or equal to
                     //        8-bit
-                    spi.cr2
+                    spi.cr2()
                         .write(|w| unsafe { w.ds().bits(0b111).frxth().set_bit() });
 
                     // SPE: SPI enabled
-                    spi.cr1.write(|w| w.spe().set_bit());
+                    spi.cr1().write(|w| w.spe().set_bit());
 
                     Spi { spi, pins }
                 }
 
                 pub fn clear_overrun(&mut self) {
-                    self.spi.dr.read().dr();
-                    self.spi.sr.read().ovr();
+                    self.spi.dr().read().dr();
+                    self.spi.sr().read().ovr();
                 }
 
                 /// Change the baud rate of the SPI
                 #[allow(unused_unsafe)]  // Necessary for stm32l4r9
                 pub fn reclock(&mut self, freq: Hertz, clocks: Clocks) {
                     self.disable();
-                    self.spi.cr1.modify(|_, w| unsafe {
+                    self.spi.cr1().modify(|_, w| unsafe {
                         w.br().bits(Self::compute_baud_rate(clocks.$pclkX(), freq));
                         w.spe().set_bit()
                     });
@@ -238,7 +238,7 @@ macro_rules! hal {
                 type Error = Error;
 
                 fn read(&mut self) -> nb::Result<u8, Error> {
-                    let sr = self.spi.sr.read();
+                    let sr = self.spi.sr().read();
 
                     Err(if sr.ovr().bit_is_set() {
                         nb::Error::Other(Error::Overrun)
@@ -250,7 +250,7 @@ macro_rules! hal {
                         // NOTE(read_volatile) read only 1 byte (the svd2rust API only allows
                         // reading a half-word)
                         return Ok(unsafe {
-                            ptr::read_volatile(&self.spi.dr as *const _ as *const u8)
+                            ptr::read_volatile(&self.spi.dr() as *const _ as *const u8)
                         });
                     } else {
                         nb::Error::WouldBlock
@@ -258,7 +258,7 @@ macro_rules! hal {
                 }
 
                 fn send(&mut self, byte: u8) -> nb::Result<(), Error> {
-                    let sr = self.spi.sr.read();
+                    let sr = self.spi.sr().read();
 
                     Err(if sr.ovr().bit_is_set() {
                         nb::Error::Other(Error::Overrun)
@@ -268,7 +268,7 @@ macro_rules! hal {
                         nb::Error::Other(Error::Crc)
                     } else if sr.txe().bit_is_set() {
                         // NOTE(write_volatile) see note above
-                        unsafe { ptr::write_volatile(&self.spi.dr as *const _ as *mut u8, byte) }
+                        unsafe { ptr::write_volatile(&self.spi.dr() as *const _ as *mut u8, byte) }
                         return Ok(());
                     } else {
                         nb::Error::WouldBlock
@@ -412,7 +412,7 @@ macro_rules! spi_dma {
                 // Perform one-time setup actions to keep the work minimal when using the driver.
 
                 channel.set_peripheral_address(
-                    unsafe { &(*$SPIX::ptr()).dr as *const _ as u32 },
+                    unsafe { &(*$SPIX::ptr()).dr() as *const _ as u32 },
                     false,
                 );
                 channel.set_request_line($RX_CHSEL).unwrap();
@@ -447,7 +447,7 @@ macro_rules! spi_dma {
                 // Perform one-time setup actions to keep the work minimal when using the driver.
 
                 channel.set_peripheral_address(
-                    unsafe { &(*$SPIX::ptr()).dr as *const _ as u32 },
+                    unsafe { &(*$SPIX::ptr()).dr() as *const _ as u32 },
                     false,
                 );
                 channel.set_request_line($TX_CHSEL).unwrap();
@@ -489,7 +489,7 @@ macro_rules! spi_dma {
                 // Setup RX channel
                 //
                 rx_channel.set_peripheral_address(
-                    unsafe { &(*$SPIX::ptr()).dr as *const _ as u32 },
+                    unsafe { &(*$SPIX::ptr()).dr() as *const _ as u32 },
                     false,
                 );
                 rx_channel.set_request_line($RX_CHSEL).unwrap();
@@ -520,7 +520,7 @@ macro_rules! spi_dma {
                 // Setup TX channel
                 //
                 tx_channel.set_peripheral_address(
-                    unsafe { &(*$SPIX::ptr()).dr as *const _ as u32 },
+                    unsafe { &(*$SPIX::ptr()).dr() as *const _ as u32 },
                     false,
                 );
                 tx_channel.set_request_line($TX_CHSEL).unwrap();
@@ -600,7 +600,7 @@ macro_rules! spi_dma {
                 self.payload
                     .spi
                     .spi
-                    .cr2
+                    .cr2()
                     .modify(|_, w| w.rxdmaen().set_bit()); // 1.
                 self.channel.start(); // 2.
                 self.payload.spi.enable(); // 4.
@@ -620,7 +620,7 @@ macro_rules! spi_dma {
                 self.payload
                     .spi
                     .spi
-                    .cr2
+                    .cr2()
                     .modify(|_, w| w.rxdmaen().clear_bit()); // 3.
             }
         }
@@ -641,7 +641,7 @@ macro_rules! spi_dma {
                 self.payload
                     .spi
                     .spi
-                    .cr2
+                    .cr2()
                     .modify(|_, w| w.txdmaen().set_bit()); // 3.
                 self.payload.spi.enable(); // 4.
             }
@@ -660,7 +660,7 @@ macro_rules! spi_dma {
                 self.payload
                     .spi
                     .spi
-                    .cr2
+                    .cr2()
                     .modify(|_, w| w.txdmaen().clear_bit()); // 3.
             }
         }
@@ -680,14 +680,14 @@ macro_rules! spi_dma {
                 self.payload
                     .spi
                     .spi
-                    .cr2
+                    .cr2()
                     .modify(|_, w| w.rxdmaen().set_bit()); // 1.
                 self.rx_channel.start(); // 2.
                 self.tx_channel.start(); // 2.
                 self.payload
                     .spi
                     .spi
-                    .cr2
+                    .cr2()
                     .modify(|_, w| w.txdmaen().set_bit()); // 3.
                 self.payload.spi.enable(); // 4.
             }
@@ -707,7 +707,7 @@ macro_rules! spi_dma {
                 self.payload
                     .spi
                     .spi
-                    .cr2
+                    .cr2()
                     .modify(|_, w| w.rxdmaen().clear_bit().txdmaen().clear_bit()); // 3.
             }
         }

@@ -153,7 +153,7 @@ impl<SPIN> Tsc<SPIN> {
             spread_spectrum_deviation: None,
         });
 
-        tsc.cr.write(|w| unsafe {
+        tsc.cr().write(|w| unsafe {
             w.ctph()
                 .bits(
                     config
@@ -181,16 +181,16 @@ impl<SPIN> Tsc<SPIN> {
         let bit_pos = SPIN::OFFSET + (4 * (SPIN::GROUP - 1));
 
         // Schmitt trigger hysteresis on sample IOs
-        tsc.iohcr.write(|w| unsafe { w.bits(1 << bit_pos) });
+        tsc.iohcr().write(|w| unsafe { w.bits(1 << bit_pos) });
 
         // Set the sampling pin
-        tsc.ioscr.write(|w| unsafe { w.bits(1 << bit_pos) });
+        tsc.ioscr().write(|w| unsafe { w.bits(1 << bit_pos) });
 
         // set the acquisitiuon groups based of the channel pins, stm32l432xx only has group 2
-        tsc.iogcsr.write(|w| w.g2e().set_bit());
+        tsc.iogcsr().write(|w| w.g2e().set_bit());
 
         // clear interrupt & flags
-        tsc.icr.write(|w| w.eoaic().set_bit().mceic().set_bit());
+        tsc.icr().write(|w| w.eoaic().set_bit().mceic().set_bit());
 
         Tsc { tsc, sample_pin }
     }
@@ -204,24 +204,24 @@ impl<SPIN> Tsc<SPIN> {
         self.clear(Event::MaxCountError);
 
         // discharge the caps ready for a new reading
-        self.tsc.cr.modify(|_, w| w.iodef().clear_bit());
+        self.tsc.cr().modify(|_, w| w.iodef().clear_bit());
 
         let bit_pos = PIN::OFFSET + (4 * (PIN::GROUP - 1));
 
         // Set the channel pin
-        self.tsc.ioccr.write(|w| unsafe { w.bits(1 << bit_pos) });
+        self.tsc.ioccr().write(|w| unsafe { w.bits(1 << bit_pos) });
 
-        self.tsc.cr.modify(|_, w| w.start().set_bit());
+        self.tsc.cr().modify(|_, w| w.start().set_bit());
     }
 
     /// Clear interrupt & flags
     pub fn clear(&self, event: Event) {
         match event {
             Event::EndOfAcquisition => {
-                self.tsc.icr.write(|w| w.eoaic().set_bit());
+                self.tsc.icr().write(|w| w.eoaic().set_bit());
             }
             Event::MaxCountError => {
-                self.tsc.icr.write(|w| w.mceic().set_bit());
+                self.tsc.icr().write(|w| w.mceic().set_bit());
             }
         }
     }
@@ -235,16 +235,16 @@ impl<SPIN> Tsc<SPIN> {
         self.start(input);
 
         let result = loop {
-            let isr = self.tsc.isr.read();
+            let isr = self.tsc.isr().read();
             if isr.eoaf().bit_is_set() {
-                self.tsc.icr.write(|w| w.eoaic().set_bit());
+                self.tsc.icr().write(|w| w.eoaic().set_bit());
                 break Ok(self.read_unchecked());
             } else if isr.mcef().bit_is_set() {
-                self.tsc.icr.write(|w| w.mceic().set_bit());
+                self.tsc.icr().write(|w| w.mceic().set_bit());
                 break Err(Error::MaxCountError);
             }
         };
-        self.tsc.ioccr.write(|w| unsafe { w.bits(0b0) }); // clear channel register
+        self.tsc.ioccr().write(|w| unsafe { w.bits(0b0) }); // clear channel register
         result
     }
 
@@ -255,7 +255,7 @@ impl<SPIN> Tsc<SPIN> {
     {
         let bit_pos = PIN::OFFSET + (4 * (PIN::GROUP - 1));
         // Read the current channel config
-        let channel = self.tsc.ioccr.read().bits();
+        let channel = self.tsc.ioccr().read().bits();
         // if they are equal we have the right pin
         if channel == (1 << bit_pos) {
             Ok(self.read_unchecked())
@@ -267,22 +267,22 @@ impl<SPIN> Tsc<SPIN> {
     /// Reads the tsc group 2 count register
     /// WARNING, just returns the contents of the register! No validation of the correct pin
     pub fn read_unchecked(&self) -> u16 {
-        self.tsc.iog2cr.read().cnt().bits()
+        self.tsc.iog2cr().read().cnt().bits()
     }
 
     /// Is the tsc performing an aquisition
     pub fn in_progress(&mut self) -> bool {
-        self.tsc.cr.read().start().bit_is_set()
+        self.tsc.cr().read().start().bit_is_set()
     }
 
     /// Enables an interrupt event
     pub fn listen(&mut self, event: Event) {
         match event {
             Event::EndOfAcquisition => {
-                self.tsc.ier.modify(|_, w| w.eoaie().set_bit());
+                self.tsc.ier().modify(|_, w| w.eoaie().set_bit());
             }
             Event::MaxCountError => {
-                self.tsc.ier.modify(|_, w| w.mceie().set_bit());
+                self.tsc.ier().modify(|_, w| w.mceie().set_bit());
             }
         }
     }
@@ -291,10 +291,10 @@ impl<SPIN> Tsc<SPIN> {
     pub fn unlisten(&self, event: Event) {
         match event {
             Event::EndOfAcquisition => {
-                self.tsc.ier.modify(|_, w| w.eoaie().clear_bit());
+                self.tsc.ier().modify(|_, w| w.eoaie().clear_bit());
             }
             Event::MaxCountError => {
-                self.tsc.ier.modify(|_, w| w.mceie().clear_bit());
+                self.tsc.ier().modify(|_, w| w.mceie().clear_bit());
             }
         }
     }

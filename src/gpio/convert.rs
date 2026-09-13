@@ -17,17 +17,17 @@ impl<MODE, HL, const P: char, const N: u8> Pin<MODE, HL, P, N> {
         unsafe {
             if N < 8 {
                 let offset2 = 4 * { N };
-                (*Gpio::<P>::ptr()).afrl.modify(|r, w| {
+                (*Gpio::<P>::ptr()).afrl().modify(|r, w| {
                     w.bits((r.bits() & !(0b1111 << offset2)) | ((A as u32) << offset2))
                 });
             } else {
                 let offset2 = 4 * { N - 8 };
-                (*Gpio::<P>::ptr()).afrh.modify(|r, w| {
+                (*Gpio::<P>::ptr()).afrh().modify(|r, w| {
                     w.bits((r.bits() & !(0b1111 << offset2)) | ((A as u32) << offset2))
                 });
             }
             (*Gpio::<P>::ptr())
-                .moder
+                .moder()
                 .modify(|r, w| w.bits((r.bits() & !(0b11 << offset)) | (0b10 << offset)));
         }
     }
@@ -162,17 +162,17 @@ impl<MODE, HL, const P: char, const N: u8> Pin<MODE, HL, P, N> {
         let offset = 2 * N;
         unsafe {
             (*Gpio::<P>::ptr())
-                .pupdr
+                .pupdr()
                 .modify(|r, w| w.bits((r.bits() & !(0b11 << offset)) | (M::PUPDR << offset)));
 
             if let Some(otyper) = M::OTYPER {
                 (*Gpio::<P>::ptr())
-                    .otyper
+                    .otyper()
                     .modify(|r, w| w.bits(r.bits() & !(0b1 << N) | (otyper << N)));
             }
 
             (*Gpio::<P>::ptr())
-                .moder
+                .moder()
                 .modify(|r, w| w.bits((r.bits() & !(0b11 << offset)) | (M::MODER << offset)));
         }
     }

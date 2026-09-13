@@ -130,7 +130,7 @@ impl CSR {
     #[allow(dead_code)]
     pub(crate) fn csr(&mut self) -> &rcc::CSR {
         // NOTE(unsafe) this proxy grants exclusive access to this register
-        unsafe { &(*RCC::ptr()).csr }
+        unsafe { &(*RCC::ptr()).csr() }
     }
 }
 
@@ -144,7 +144,7 @@ impl CRRCR {
     #[allow(dead_code)]
     pub(crate) fn crrcr(&mut self) -> &rcc::CRRCR {
         // NOTE(unsafe) this proxy grants exclusive access to this register
-        unsafe { &(*RCC::ptr()).crrcr }
+        unsafe { &(*RCC::ptr()).crrcr() }
     }
 
     /// Checks if the 48 MHz HSI is enabled
@@ -167,7 +167,7 @@ impl CCIPR {
     #[allow(dead_code)]
     pub(crate) fn ccipr(&mut self) -> &rcc::CCIPR {
         // NOTE(unsafe) this proxy grants exclusive access to this register
-        unsafe { &(*RCC::ptr()).ccipr }
+        unsafe { &(*RCC::ptr()).ccipr() }
     }
 }
 
@@ -181,7 +181,7 @@ impl BDCR {
     #[allow(dead_code)]
     pub(crate) fn enr(&mut self) -> &rcc::BDCR {
         // NOTE(unsafe) this proxy grants exclusive access to this register
-        unsafe { &(*RCC::ptr()).bdcr }
+        unsafe { &(*RCC::ptr()).bdcr() }
     }
 }
 
@@ -201,19 +201,19 @@ macro_rules! bus_struct {
                 #[allow(unused)]
                 pub(crate) fn enr(&self) -> &rcc::$EN {
                     // NOTE(unsafe) this proxy grants exclusive access to this register
-                    unsafe { &(*RCC::ptr()).$en }
+                    unsafe { (*RCC::ptr()).$en() }
                 }
 
                 #[allow(unused)]
                 pub(crate) fn smenr(&self) -> &rcc::$SMEN {
                     // NOTE(unsafe) this proxy grants exclusive access to this register
-                    unsafe { &(*RCC::ptr()).$smen }
+                    unsafe { (*RCC::ptr()).$smen() }
                 }
 
                 #[allow(unused)]
                 pub(crate) fn rstr(&self) -> &rcc::$RST {
                     // NOTE(unsafe) this proxy grants exclusive access to this register
-                    unsafe { &(*RCC::ptr()).$rst }
+                    unsafe { (*RCC::ptr()).$rst() }
                 }
             }
         )+
@@ -436,9 +436,9 @@ impl CFGR {
         let rcc = unsafe { &*RCC::ptr() };
 
         // Switch to MSI to prevent problems with PLL configuration.
-        if rcc.cr.read().msion().bit_is_clear() {
+        if rcc.cr().read().msion().bit_is_clear() {
             // Turn on MSI and configure it to 4MHz.
-            rcc.cr.modify(|_, w| {
+            rcc.cr().modify(|_, w| {
                 w.msirgsel().set_bit(); // MSI Range is provided by MSIRANGE[3:0].
                 w.msirange().range4m();
                 w.msipllen().clear_bit();
@@ -446,13 +446,13 @@ impl CFGR {
             });
 
             // Wait until MSI is running
-            while rcc.cr.read().msirdy().bit_is_clear() {}
+            while rcc.cr().read().msirdy().bit_is_clear() {}
         }
-        if rcc.cfgr.read().sws().bits() != 0 {
+        if rcc.cfgr().read().sws().bits() != 0 {
             // Set MSI as a clock source, reset prescalers.
-            rcc.cfgr.reset();
+            rcc.cfgr().reset();
             // Wait for clock switch status bits to change.
-            while rcc.cfgr.read().sws().bits() != 0 {}
+            while rcc.cfgr().read().sws().bits() != 0 {}
         }
 
         //
@@ -469,10 +469,10 @@ impl CFGR {
                     css: ClockSecuritySystem::Enable,
                 }),
             ) => {
-                rcc.csr.modify(|_, w| w.lsion().set_bit());
+                rcc.csr().modify(|_, w| w.lsion().set_bit());
 
                 // Wait until LSI is running
-                while rcc.csr.read().lsirdy().bit_is_clear() {}
+                while rcc.csr().read().lsirdy().bit_is_clear() {}
 
                 true
             }
@@ -484,7 +484,7 @@ impl CFGR {
             pwr.cr1.reg().modify(|_, w| w.dbp().set_bit());
 
             // 2. Setup the LSE
-            rcc.bdcr.modify(|_, w| {
+            rcc.bdcr().modify(|_, w| {
                 w.lseon().set_bit(); // Enable LSE
 
                 if lse_cfg.bypass == CrystalBypass::Enable {
@@ -499,19 +499,19 @@ impl CFGR {
             });
 
             // Wait until LSE is running
-            while rcc.bdcr.read().lserdy().bit_is_clear() {}
+            while rcc.bdcr().read().lserdy().bit_is_clear() {}
 
             // Setup CSS
             if lse_cfg.css == ClockSecuritySystem::Enable {
                 // Enable CSS and interrupt
-                rcc.bdcr.modify(|_, w| w.lsecsson().set_bit());
-                rcc.cier.modify(|_, w| w.lsecssie().set_bit());
+                rcc.bdcr().modify(|_, w| w.lsecsson().set_bit());
+                rcc.cier().modify(|_, w| w.lsecssie().set_bit());
             }
         }
 
         // If HSE is available, set it up
         if let Some(hse_cfg) = &self.hse {
-            rcc.cr.write(|w| {
+            rcc.cr().write(|w| {
                 w.hseon().set_bit();
 
                 if hse_cfg.bypass == CrystalBypass::Enable {
@@ -521,18 +521,18 @@ impl CFGR {
                 w
             });
 
-            while rcc.cr.read().hserdy().bit_is_clear() {}
+            while rcc.cr().read().hserdy().bit_is_clear() {}
 
             // Setup CSS
             if hse_cfg.css == ClockSecuritySystem::Enable {
                 // Enable CSS
-                rcc.cr.modify(|_, w| w.csson().set_bit());
+                rcc.cr().modify(|_, w| w.csson().set_bit());
             }
         }
 
         if let Some(msi) = self.msi {
             unsafe {
-                rcc.cr.modify(|_, w| {
+                rcc.cr().modify(|_, w| {
                     w.msirange()
                         .bits(msi as u8)
                         .msirgsel()
@@ -550,21 +550,21 @@ impl CFGR {
             };
 
             // Wait until MSI is running
-            while rcc.cr.read().msirdy().bit_is_clear() {}
+            while rcc.cr().read().msirdy().bit_is_clear() {}
         }
 
         // Turn on USB, RNG Clock using the HSI48 CLK source
         if self.hsi48 {
             // p. 180 in ref-manual
-            rcc.crrcr.modify(|_, w| w.hsi48on().set_bit());
+            rcc.crrcr().modify(|_, w| w.hsi48on().set_bit());
 
             // Wait until HSI48 is running
-            while rcc.crrcr.read().hsi48rdy().bit_is_clear() {}
+            while rcc.crrcr().read().hsi48rdy().bit_is_clear() {}
         }
 
         // Select MSI as clock source for usb48, rng ...
         if let Some(MsiFreq::RANGE48M) = self.msi {
-            unsafe { rcc.ccipr.modify(|_, w| w.clk48sel().bits(0b11)) };
+            unsafe { rcc.ccipr().modify(|_, w| w.clk48sel().bits(0b11)) };
         }
 
         //
@@ -609,8 +609,8 @@ impl CFGR {
 
         // Check if HSI should be started
         if pll_source == PllSource::HSI16 || (self.msi.is_none() && self.hse.is_none()) {
-            rcc.cr.write(|w| w.hsion().set_bit());
-            while rcc.cr.read().hsirdy().bit_is_clear() {}
+            rcc.cr().write(|w| w.hsion().set_bit());
+            while rcc.cr().read().hsirdy().bit_is_clear() {}
         }
 
         let pllconf = if self.pll_config.is_none() {
@@ -736,12 +736,12 @@ impl CFGR {
 
             // use PLL as source
             sysclk_src_bits = 0b11;
-            rcc.cr.modify(|_, w| w.pllon().clear_bit());
-            while rcc.cr.read().pllrdy().bit_is_set() {}
+            rcc.cr().modify(|_, w| w.pllon().clear_bit());
+            while rcc.cr().read().pllrdy().bit_is_set() {}
 
             let pllsrc_bits = pll_source.to_pllsrc();
 
-            rcc.pllcfgr.modify(|_, w| unsafe {
+            rcc.pllcfgr().modify(|_, w| unsafe {
                 w.pllsrc()
                     .bits(pllsrc_bits)
                     .pllm()
@@ -752,14 +752,14 @@ impl CFGR {
                     .bits(pllconf.n)
             });
 
-            rcc.cr.modify(|_, w| w.pllon().set_bit());
+            rcc.cr().modify(|_, w| w.pllon().set_bit());
 
-            while rcc.cr.read().pllrdy().bit_is_clear() {}
+            while rcc.cr().read().pllrdy().bit_is_clear() {}
 
-            rcc.pllcfgr.modify(|_, w| w.pllren().set_bit());
+            rcc.pllcfgr().modify(|_, w| w.pllren().set_bit());
 
             // SW: PLL selected as system clock
-            rcc.cfgr.modify(|_, w| unsafe {
+            rcc.cfgr().modify(|_, w| unsafe {
                 w.ppre2()
                     .bits(ppre2_bits)
                     .ppre1()
@@ -777,7 +777,7 @@ impl CFGR {
             }
 
             // SW: MSI selected as system clock
-            rcc.cfgr.write(|w| unsafe {
+            rcc.cfgr().write(|w| unsafe {
                 w.ppre2()
                     .bits(ppre2_bits)
                     .ppre1()
@@ -789,7 +789,7 @@ impl CFGR {
             });
         }
 
-        while rcc.cfgr.read().sws().bits() != sysclk_src_bits {}
+        while rcc.cfgr().read().sws().bits() != sysclk_src_bits {}
 
         //
         // 3. Shutdown unused clocks that have auto-started
@@ -797,7 +797,7 @@ impl CFGR {
 
         // MSI always starts on reset
         if msi.is_none() {
-            rcc.cr
+            rcc.cr()
                 .modify(|_, w| w.msion().clear_bit().msipllen().clear_bit())
         }
 

@@ -97,7 +97,7 @@ macro_rules! generate_register {
             #[allow(unused)]
             pub(crate) fn $b(&mut self) -> &flash::$a {
                 // NOTE(unsafe) this proxy grants exclusive access to this register
-                unsafe { &(*FLASH::ptr()).$b }
+                unsafe { (*FLASH::ptr()).$b() }
             }
         }
     };
@@ -188,7 +188,7 @@ impl<'a> WriteErase for FlashProgramming<'a> {
     type NativeType = u64;
 
     fn status(&self) -> flash_trait::Result {
-        let sr = unsafe { &(*FLASH::ptr()).sr }.read();
+        let sr = unsafe { &(*FLASH::ptr()).sr() }.read();
 
         if sr.bsy().bit_is_set() {
             Err(flash_trait::Error::Busy)

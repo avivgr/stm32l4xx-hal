@@ -115,22 +115,22 @@ where
         let offset = 4 * (i % 4);
         match i {
             0..=3 => {
-                syscfg.exticr1.modify(|r, w| unsafe {
+                syscfg.exticr1().modify(|r, w| unsafe {
                     w.bits((r.bits() & !(0xf << offset)) | (port << offset))
                 });
             }
             4..=7 => {
-                syscfg.exticr2.modify(|r, w| unsafe {
+                syscfg.exticr2().modify(|r, w| unsafe {
                     w.bits((r.bits() & !(0xf << offset)) | (port << offset))
                 });
             }
             8..=11 => {
-                syscfg.exticr3.modify(|r, w| unsafe {
+                syscfg.exticr3().modify(|r, w| unsafe {
                     w.bits((r.bits() & !(0xf << offset)) | (port << offset))
                 });
             }
             12..=15 => {
-                syscfg.exticr4.modify(|r, w| unsafe {
+                syscfg.exticr4().modify(|r, w| unsafe {
                     w.bits((r.bits() & !(0xf << offset)) | (port << offset))
                 });
             }
@@ -144,21 +144,21 @@ where
         let i = self.pin_id();
         match edge {
             Edge::Rising => {
-                exti.rtsr1
+                exti.rtsr1()
                     .modify(|r, w| unsafe { w.bits(r.bits() | (1 << i)) });
-                exti.ftsr1
+                exti.ftsr1()
                     .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << i)) });
             }
             Edge::Falling => {
-                exti.ftsr1
+                exti.ftsr1()
                     .modify(|r, w| unsafe { w.bits(r.bits() | (1 << i)) });
-                exti.rtsr1
+                exti.rtsr1()
                     .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << i)) });
             }
             Edge::RisingFalling => {
-                exti.rtsr1
+                exti.rtsr1()
                     .modify(|r, w| unsafe { w.bits(r.bits() | (1 << i)) });
-                exti.ftsr1
+                exti.ftsr1()
                     .modify(|r, w| unsafe { w.bits(r.bits() | (1 << i)) });
             }
         }
@@ -167,27 +167,27 @@ where
     /// Enable external interrupts from this pin.
     #[inline(always)]
     fn enable_interrupt(&mut self, exti: &mut EXTI) {
-        exti.imr1
+        exti.imr1()
             .modify(|r, w| unsafe { w.bits(r.bits() | (1 << self.pin_id())) });
     }
 
     /// Disable external interrupts from this pin
     #[inline(always)]
     fn disable_interrupt(&mut self, exti: &mut EXTI) {
-        exti.imr1
+        exti.imr1()
             .modify(|r, w| unsafe { w.bits(r.bits() & !(1 << self.pin_id())) });
     }
 
     /// Clear the interrupt pending bit for this pin
     #[inline(always)]
     fn clear_interrupt_pending_bit(&mut self) {
-        unsafe { (*EXTI::ptr()).pr1.write(|w| w.bits(1 << self.pin_id())) };
+        unsafe { (*EXTI::ptr()).pr1().write(|w| w.bits(1 << self.pin_id())) };
     }
 
     /// Reads the interrupt pending bit for this pin
     #[inline(always)]
     fn check_interrupt(&self) -> bool {
-        unsafe { ((*EXTI::ptr()).pr1.read().bits() & (1 << self.pin_id())) != 0 }
+        unsafe { ((*EXTI::ptr()).pr1().read().bits() & (1 << self.pin_id())) != 0 }
     }
 
     /// Get the `Interrupt` for this pin.
@@ -348,7 +348,7 @@ impl<MODE, HL, const P: char, const N: u8> Pin<Output<MODE>, HL, P, N> {
 
         unsafe {
             (*Gpio::<P>::ptr())
-                .ospeedr
+                .ospeedr()
                 .modify(|r, w| w.bits((r.bits() & !(0b11 << offset)) | ((speed as u32) << offset)))
         };
 
@@ -363,7 +363,7 @@ impl<HL, const P: char, const N: u8> Pin<Output<OpenDrain>, HL, P, N> {
         let value = if on { 0b01 } else { 0b00 };
         unsafe {
             (*Gpio::<P>::ptr())
-                .pupdr
+                .pupdr()
                 .modify(|r, w| w.bits((r.bits() & !(0b11 << offset)) | (value << offset)))
         };
     }
@@ -376,7 +376,7 @@ impl<MODE, HL, const P: char, const N: u8, const A: u8> Pin<Alternate<MODE, A>, 
 
         unsafe {
             (*Gpio::<P>::ptr())
-                .ospeedr
+                .ospeedr()
                 .modify(|r, w| w.bits((r.bits() & !(0b11 << offset)) | ((speed as u32) << offset)))
         };
 
@@ -389,7 +389,7 @@ impl<MODE, HL, const P: char, const N: u8, const A: u8> Pin<Alternate<MODE, A>, 
         let value = if on { 0b01 } else { 0b00 };
         unsafe {
             (*Gpio::<P>::ptr())
-                .pupdr
+                .pupdr()
                 .modify(|r, w| w.bits((r.bits() & !(0b11 << offset)) | (value << offset)))
         };
     }
@@ -401,7 +401,7 @@ impl<HL, const P: char, const N: u8, const A: u8> Pin<Alternate<PushPull, A>, HL
         let offset = { N };
         unsafe {
             (*Gpio::<P>::ptr())
-                .otyper
+                .otyper()
                 .modify(|r, w| w.bits(r.bits() | (1 << offset)))
         };
 
@@ -447,23 +447,23 @@ impl<MODE, HL, const P: char, const N: u8> Pin<MODE, HL, P, N> {
     #[inline(always)]
     fn _set_high(&mut self) {
         // NOTE(unsafe) atomic write to a stateless register
-        unsafe { (*Gpio::<P>::ptr()).bsrr.write(|w| w.bits(1 << N)) }
+        unsafe { (*Gpio::<P>::ptr()).bsrr().write(|w| w.bits(1 << N)) }
     }
     #[inline(always)]
     fn _set_low(&mut self) {
         // NOTE(unsafe) atomic write to a stateless register
-        unsafe { (*Gpio::<P>::ptr()).bsrr.write(|w| w.bits(1 << (16 + N))) }
+        unsafe { (*Gpio::<P>::ptr()).bsrr().write(|w| w.bits(1 << (16 + N))) }
     }
 
     #[inline(always)]
     fn _is_set_low(&self) -> bool {
         // NOTE(unsafe) atomic read with no side effects
-        unsafe { (*Gpio::<P>::ptr()).odr.read().bits() & (1 << N) == 0 }
+        unsafe { (*Gpio::<P>::ptr()).odr().read().bits() & (1 << N) == 0 }
     }
     #[inline(always)]
     fn _is_low(&self) -> bool {
         // NOTE(unsafe) atomic read with no side effects
-        unsafe { (*Gpio::<P>::ptr()).idr.read().bits() & (1 << N) == 0 }
+        unsafe { (*Gpio::<P>::ptr()).idr().read().bits() & (1 << N) == 0 }
     }
 }
 
@@ -613,7 +613,7 @@ macro_rules! af {
         impl<const P: char> Afr<$HL, P> {
             #[allow(dead_code)]
             pub(crate) fn afr(&mut self) -> &pac::gpioa::$AFR {
-                unsafe { &(*Gpio::<P>::ptr()).$afr }
+                unsafe { (*Gpio::<P>::ptr()).$afr() }
             }
         }
     };

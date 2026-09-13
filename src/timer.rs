@@ -101,14 +101,14 @@ macro_rules! hal {
                     let ticks = self.clock / self.timeout; // TODO check pclk that timer is on
                     let psc = u16((ticks - 1) / (1 << 16)).unwrap();
 
-                    self.tim.psc.write(|w| unsafe { w.psc().bits(psc) });
+                    self.tim.psc().write(|w| unsafe { w.psc().bits(psc) });
 
                     let arr = u16(ticks / u32(psc + 1)).unwrap();
 
-                    self.tim.arr.write(|w| unsafe { w.bits(u32(arr)) });
+                    self.tim.arr().write(|w| unsafe { w.bits(u32(arr)) });
 
                     // Trigger an update event to load the prescaler value to the clock.
-                    self.tim.egr.write(|w| w.ug().set_bit());
+                    self.tim.egr().write(|w| w.ug().set_bit());
 
                     // The above line raises an update event which will indicate
                     // that the timer is already finished. Since this is not the case,
@@ -116,11 +116,11 @@ macro_rules! hal {
                     self.clear_update_interrupt_flag();
 
                     // Start counter.
-                    self.tim.cr1.modify(|_, w| w.cen().set_bit());
+                    self.tim.cr1().modify(|_, w| w.cen().set_bit());
                 }
 
                 fn wait(&mut self) -> nb::Result<(), Void> {
-                    if self.tim.sr.read().uif().bit_is_clear() {
+                    if self.tim.sr().read().uif().bit_is_clear() {
                         Err(nb::Error::WouldBlock)
                     } else {
                         self.clear_update_interrupt_flag();
@@ -183,21 +183,21 @@ macro_rules! hal {
                     debug_assert!(frequency.raw() > 0);
                     debug_assert!(psc <= core::u16::MAX.into());
 
-                    tim.psc.write(|w| w.psc().bits((psc as u16).into()) );
+                    tim.psc().write(|w| w.psc().bits((psc as u16).into()) );
                     let max = core::$width::MAX;
-                    tim.arr.write(|w| unsafe { w.bits(max.into()) });
+                    tim.arr().write(|w| unsafe { w.bits(max.into()) });
 
                     // Trigger an update event to load the prescaler value to the clock.
-                    tim.egr.write(|w| w.ug().set_bit());
+                    tim.egr().write(|w| w.ug().set_bit());
 
 
                     // The above line raises an update event which will indicate
                     // that the timer is already finished. Since this is not the case,
                     // it should be cleared
-                    tim.sr.modify(|_, w| w.uif().clear_bit());
+                    tim.sr().modify(|_, w| w.uif().clear_bit());
 
                     // Start counter.
-                    tim.cr1.modify(|_, w| {
+                    tim.cr1().modify(|_, w| {
                         w.cen().set_bit();
 
                         if event_on_overflow {
@@ -221,7 +221,7 @@ macro_rules! hal {
                     match event {
                         Event::TimeOut => {
                             // Enable update event interrupt.
-                            self.tim.dier.write(|w| w.uie().set_bit());
+                            self.tim.dier().write(|w| w.uie().set_bit());
                         }
                     }
                 }
@@ -234,7 +234,7 @@ macro_rules! hal {
                     match event {
                         Event::TimeOut => {
                             // Clear interrupt flag
-                            self.tim.sr.write(|w| w.uif().clear_bit());
+                            self.tim.sr().write(|w| w.uif().clear_bit());
                         }
                     }
                 }
@@ -244,30 +244,30 @@ macro_rules! hal {
                     match event {
                         Event::TimeOut => {
                             // Enable update event interrupt
-                            self.tim.dier.write(|w| w.uie().clear_bit());
+                            self.tim.dier().write(|w| w.uie().clear_bit());
                         }
                     }
                 }
 
                 /// Clear the update interrupt flag.
                 pub fn clear_update_interrupt_flag(&mut self) {
-                    self.tim.sr.modify(|_, w| w.uif().clear_bit());
+                    self.tim.sr().modify(|_, w| w.uif().clear_bit());
                 }
 
                 /// Get the count of the timer.
                 pub fn count() -> $width {
-                    let cnt = unsafe { (*$TIM::ptr()).cnt.read() };
+                    let cnt = unsafe { (*$TIM::ptr()).cnt().read() };
                     cnt.cnt().bits()
                 }
 
                 /// Pause the counter.
                 pub fn pause(&mut self) {
-                    self.tim.cr1.modify(|_, w| w.cen().clear_bit());
+                    self.tim.cr1().modify(|_, w| w.cen().clear_bit());
                 }
 
                 /// Reset the counter.
                 pub fn reset(&mut self) {
-                    self.tim.cnt.modify(|_, w| unsafe { w.bits(0) });
+                    self.tim.cnt().modify(|_, w| unsafe { w.bits(0) });
                 }
 
                 /// Releases the TIM peripheral.

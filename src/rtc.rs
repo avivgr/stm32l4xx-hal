@@ -205,15 +205,15 @@ impl Rtc {
     /// Get date and time.
     pub fn get_datetime(&self) -> PrimitiveDateTime {
         let sync_p = self.rtc_config.sync_prescaler as u32;
-        let ssr = self.rtc.ssr.read();
+        let ssr = self.rtc.ssr().read();
         let micro = 1_000_000u32 / (sync_p + 1) * (sync_p - ssr.ss().bits() as u32);
-        let tr = self.rtc.tr.read();
+        let tr = self.rtc.tr().read();
         let second = bcd2_to_byte((tr.st().bits(), tr.su().bits()));
         let minute = bcd2_to_byte((tr.mnt().bits(), tr.mnu().bits()));
         let hour = bcd2_to_byte((tr.ht().bits(), tr.hu().bits()));
         // Reading either RTC_SSR or RTC_TR locks the values in the higher-order
         // calendar shadow registers until RTC_DR is read.
-        let dr = self.rtc.dr.read();
+        let dr = self.rtc.dr().read();
 
         // let weekday = dr.wdu().bits();
         let day = bcd2_to_byte((dr.dt().bits(), dr.du().bits()));
@@ -228,7 +228,7 @@ impl Rtc {
 
     /// Check if daylight savings time is active.
     pub fn get_daylight_savings(&self) -> bool {
-        let cr = self.rtc.cr.read();
+        let cr = self.rtc.cr().read();
         cr.bkp().bit()
     }
 
@@ -267,11 +267,11 @@ impl Rtc {
 
         self.write(false, |rtc| match alarm {
             Alarm::AlarmA => {
-                rtc.cr.modify(|_, w| w.alrae().clear_bit()); // Disable Alarm A
+                rtc.cr().modify(|_, w| w.alrae().clear_bit()); // Disable Alarm A
                 rtc_registers::clear_alarm_a_flag(rtc);
                 while !rtc_registers::is_alarm_a_accessible(rtc) {}
 
-                rtc.alrmar.modify(|_, w| unsafe {
+                rtc.alrmar().modify(|_, w| unsafe {
                     w.dt()
                         .bits(dt)
                         .du()
@@ -299,15 +299,15 @@ impl Rtc {
                 // write the SS value and mask to `rtc.alrmassr`
 
                 // enable alarm and reenable interrupt if it was enabled
-                rtc.cr.modify(|_, w| w.alrae().set_bit());
+                rtc.cr().modify(|_, w| w.alrae().set_bit());
             }
             Alarm::AlarmB => {
-                rtc.cr.modify(|_, w| w.alrbe().clear_bit());
+                rtc.cr().modify(|_, w| w.alrbe().clear_bit());
 
                 rtc_registers::clear_alarm_b_flag(rtc);
                 while !rtc_registers::is_alarm_b_accessible(rtc) {}
 
-                rtc.alrmbr.modify(|_, w| unsafe {
+                rtc.alrmbr().modify(|_, w| unsafe {
                     w.dt()
                         .bits(dt)
                         .du()
@@ -335,7 +335,7 @@ impl Rtc {
                 // write the SS value and mask to `rtc.alrmbssr`
 
                 // enable alarm and reenable interrupt if it was enabled
-                rtc.cr.modify(|_, w| w.alrbe().set_bit());
+                rtc.cr().modify(|_, w| w.alrbe().set_bit());
             }
         });
     }
@@ -344,25 +344,25 @@ impl Rtc {
     pub fn listen(&mut self, exti: &mut EXTI, event: Event) {
         self.write(false, |rtc| match event {
             Event::WakeupTimer => {
-                exti.rtsr1.modify(|_, w| w.tr20().set_bit());
-                exti.imr1.modify(|_, w| w.mr20().set_bit());
-                rtc.cr.modify(|_, w| w.wutie().set_bit())
+                exti.rtsr1().modify(|_, w| w.tr20().set_bit());
+                exti.imr1().modify(|_, w| w.mr20().set_bit());
+                rtc.cr().modify(|_, w| w.wutie().set_bit())
             }
             Event::AlarmA => {
                 // Workaround until tr17() is implemented ()
-                exti.rtsr1.modify(|_, w| w.tr18().set_bit());
-                exti.imr1.modify(|_, w| w.mr18().set_bit());
-                rtc.cr.modify(|_, w| w.alraie().set_bit())
+                exti.rtsr1().modify(|_, w| w.tr18().set_bit());
+                exti.imr1().modify(|_, w| w.mr18().set_bit());
+                rtc.cr().modify(|_, w| w.alraie().set_bit())
             }
             Event::AlarmB => {
-                exti.rtsr1.modify(|_, w| w.tr18().set_bit());
-                exti.imr1.modify(|_, w| w.mr18().set_bit());
-                rtc.cr.modify(|_, w| w.alrbie().set_bit())
+                exti.rtsr1().modify(|_, w| w.tr18().set_bit());
+                exti.imr1().modify(|_, w| w.mr18().set_bit());
+                rtc.cr().modify(|_, w| w.alrbie().set_bit())
             }
             Event::Timestamp => {
-                exti.rtsr1.modify(|_, w| w.tr19().set_bit());
-                exti.imr1.modify(|_, w| w.mr19().set_bit());
-                rtc.cr.modify(|_, w| w.tsie().set_bit())
+                exti.rtsr1().modify(|_, w| w.tr19().set_bit());
+                exti.imr1().modify(|_, w| w.mr19().set_bit());
+                rtc.cr().modify(|_, w| w.tsie().set_bit())
             }
         })
     }
@@ -371,25 +371,25 @@ impl Rtc {
     pub fn unlisten(&mut self, exti: &mut EXTI, event: Event) {
         self.write(false, |rtc| match event {
             Event::WakeupTimer => {
-                exti.rtsr1.modify(|_, w| w.tr20().clear_bit());
-                exti.imr1.modify(|_, w| w.mr20().clear_bit());
-                rtc.cr.modify(|_, w| w.wutie().clear_bit())
+                exti.rtsr1().modify(|_, w| w.tr20().clear_bit());
+                exti.imr1().modify(|_, w| w.mr20().clear_bit());
+                rtc.cr().modify(|_, w| w.wutie().clear_bit())
             }
             Event::AlarmA => {
                 // Workaround until tr17() is implemented ()
-                exti.rtsr1.modify(|_, w| w.tr18().clear_bit());
-                exti.imr1.modify(|_, w| w.mr18().clear_bit());
-                rtc.cr.modify(|_, w| w.alraie().clear_bit())
+                exti.rtsr1().modify(|_, w| w.tr18().clear_bit());
+                exti.imr1().modify(|_, w| w.mr18().clear_bit());
+                rtc.cr().modify(|_, w| w.alraie().clear_bit())
             }
             Event::AlarmB => {
-                exti.rtsr1.modify(|_, w| w.tr18().clear_bit());
-                exti.imr1.modify(|_, w| w.mr18().clear_bit());
-                rtc.cr.modify(|_, w| w.alrbie().clear_bit())
+                exti.rtsr1().modify(|_, w| w.tr18().clear_bit());
+                exti.imr1().modify(|_, w| w.mr18().clear_bit());
+                rtc.cr().modify(|_, w| w.alrbie().clear_bit())
             }
             Event::Timestamp => {
-                exti.rtsr1.modify(|_, w| w.tr19().clear_bit());
-                exti.imr1.modify(|_, w| w.mr19().clear_bit());
-                rtc.cr.modify(|_, w| w.tsie().clear_bit())
+                exti.rtsr1().modify(|_, w| w.tr19().clear_bit());
+                exti.imr1().modify(|_, w| w.mr19().clear_bit());
+                rtc.cr().modify(|_, w| w.tsie().clear_bit())
             }
         })
     }
@@ -406,19 +406,19 @@ impl Rtc {
             self.write(false, |rtc| match event {
                 Event::WakeupTimer => {
                     rtc_registers::clear_wakeup_timer_flag(rtc);
-                    unsafe { (*EXTI::ptr()).pr1.write(|w| w.bits(1 << 20)) };
+                    unsafe { (*EXTI::ptr()).pr1().write(|w| w.bits(1 << 20)) };
                 }
                 Event::AlarmA => {
                     rtc_registers::clear_alarm_a_flag(rtc);
-                    unsafe { (*EXTI::ptr()).pr1.write(|w| w.bits(1 << 18)) };
+                    unsafe { (*EXTI::ptr()).pr1().write(|w| w.bits(1 << 18)) };
                 }
                 Event::AlarmB => {
                     rtc_registers::clear_alarm_b_flag(rtc);
-                    unsafe { (*EXTI::ptr()).pr1.write(|w| w.bits(1 << 18)) };
+                    unsafe { (*EXTI::ptr()).pr1().write(|w| w.bits(1 << 18)) };
                 }
                 Event::Timestamp => {
                     rtc_registers::clear_timestamp_flag(rtc);
-                    unsafe { (*EXTI::ptr()).pr1.write(|w| w.bits(1 << 19)) };
+                    unsafe { (*EXTI::ptr()).pr1().write(|w| w.bits(1 << 19)) };
                 }
             })
         }
@@ -467,7 +467,7 @@ impl Rtc {
         }
 
         self.write(true, |rtc| {
-            rtc.cr.modify(|_, w| unsafe {
+            rtc.cr().modify(|_, w| unsafe {
                 w.fmt()
                     .clear_bit() // 24hr
                     .osel()
@@ -482,7 +482,7 @@ impl Rtc {
                     .clear_bit() // pol high
             });
 
-            rtc.prer.modify(|_, w| unsafe {
+            rtc.prer().modify(|_, w| unsafe {
                 w.prediv_s()
                     .bits(rtc_config.sync_prescaler)
                     .prediv_a()
@@ -518,7 +518,7 @@ impl Rtc {
         clock_drift = clock_drift / Self::RTC_CALR_RESOLUTION_PPM;
 
         self.write(false, |rtc| {
-            rtc.calr.modify(|_, w| unsafe {
+            rtc.calr().modify(|_, w| unsafe {
                 match period {
                     RtcCalibrationCyclePeriod::Seconds8 => {
                         w.calw8().set_bit().calw16().clear_bit();
@@ -572,8 +572,8 @@ impl Rtc {
     {
         // Disable write protection.
         // This is safe, as we're only writin the correct and expected values.
-        self.rtc.wpr.write(|w| unsafe { w.key().bits(0xca) });
-        self.rtc.wpr.write(|w| unsafe { w.key().bits(0x53) });
+        self.rtc.wpr().write(|w| unsafe { w.key().bits(0xca) });
+        self.rtc.wpr().write(|w| unsafe { w.key().bits(0x53) });
 
         if init_mode && !rtc_registers::is_init_mode(&self.rtc) {
             rtc_registers::enter_init_mode(&self.rtc);
@@ -589,7 +589,7 @@ impl Rtc {
 
         // Re-enable write protection.
         // This is safe, as the field accepts the full range of 8-bit values.
-        self.rtc.wpr.write(|w| unsafe { w.key().bits(0xff) });
+        self.rtc.wpr().write(|w| unsafe { w.key().bits(0xff) });
 
         result
     }
@@ -677,13 +677,13 @@ impl timer::CountDown for WakeupTimer<'_> {
 
         self.rtc.write(false, |rtc| {
             // Set the wakeup delay
-            rtc.wutr.write(|w|
+            rtc.wutr().write(|w|
                 // Write the lower 16 bits of `delay`. The 17th bit is taken
                 // care of via WUCKSEL in CR (see below).
                 // This is safe, as the field accepts a full 16 bit value.
                 unsafe { w.wut().bits(delay as u16) });
 
-            rtc.cr.modify(|_, w| {
+            rtc.cr().modify(|_, w| {
                 // Write WUCKSEL depending on value determined previously.
                 unsafe {
                     w.wucksel().bits(wucksel);
@@ -713,7 +713,7 @@ impl timer::Cancel for WakeupTimer<'_> {
     fn cancel(&mut self) -> Result<(), Self::Error> {
         self.rtc.write(false, |rtc| {
             // Disable the wakeup timer
-            rtc.cr.modify(|_, w| w.wute().clear_bit());
+            rtc.cr().modify(|_, w| w.wute().clear_bit());
             while !rtc_registers::is_wakeup_timer_write_flag_set(rtc) {}
             rtc_registers::clear_wakeup_timer_flag(rtc);
 
@@ -741,7 +741,7 @@ fn set_time_raw(rtc: &RTC, time: Time) {
     let (mnt, mnu) = byte_to_bcd2(time.minute() as u8);
     let (st, su) = byte_to_bcd2(time.second() as u8);
 
-    rtc.tr.write(|w| unsafe {
+    rtc.tr().write(|w| unsafe {
         w.ht()
             .bits(ht)
             .hu()
@@ -760,7 +760,7 @@ fn set_time_raw(rtc: &RTC, time: Time) {
 }
 
 fn set_daylight_savings_raw(rtc: &RTC, daylight_savings: bool) {
-    rtc.cr.modify(|_, w| w.bkp().bit(daylight_savings));
+    rtc.cr().modify(|_, w| w.bkp().bit(daylight_savings));
 }
 
 /// Raw set date
@@ -772,7 +772,7 @@ fn set_date_raw(rtc: &RTC, date: Date) {
     let yr_offset = (yr - 1970_u16) as u8;
     let (yt, yu) = byte_to_bcd2(yr_offset);
 
-    rtc.dr.write(|w| unsafe {
+    rtc.dr().write(|w| unsafe {
         w.dt()
             .bits(dt)
             .du()

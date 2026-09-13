@@ -57,7 +57,7 @@ impl<MODE> ErasedPin<Output<MODE>> {
     #[inline(always)]
     pub fn set_high(&mut self) {
         // NOTE(unsafe) atomic write to a stateless register
-        unsafe { self.block().bsrr.write(|w| w.bits(1 << self.pin_id())) };
+        unsafe { self.block().bsrr().write(|w| w.bits(1 << self.pin_id())) };
     }
 
     #[inline(always)]
@@ -65,7 +65,7 @@ impl<MODE> ErasedPin<Output<MODE>> {
         // NOTE(unsafe) atomic write to a stateless register
         unsafe {
             self.block()
-                .bsrr
+                .bsrr()
                 .write(|w| w.bits(1 << (self.pin_id() + 16)))
         };
     }
@@ -94,7 +94,7 @@ impl<MODE> ErasedPin<Output<MODE>> {
 
     #[inline(always)]
     pub fn is_set_low(&self) -> bool {
-        self.block().odr.read().bits() & (1 << self.pin_id()) == 0
+        self.block().odr().read().bits() & (1 << self.pin_id()) == 0
     }
 
     #[inline(always)]
@@ -153,7 +153,7 @@ impl ErasedPin<Output<OpenDrain>> {
 
     #[inline(always)]
     pub fn is_low(&self) -> bool {
-        self.block().idr.read().bits() & (1 << self.pin_id()) == 0
+        self.block().idr().read().bits() & (1 << self.pin_id()) == 0
     }
 }
 
@@ -179,7 +179,7 @@ impl<MODE> ErasedPin<Input<MODE>> {
 
     #[inline(always)]
     pub fn is_low(&self) -> bool {
-        self.block().idr.read().bits() & (1 << self.pin_id()) == 0
+        self.block().idr().read().bits() & (1 << self.pin_id()) == 0
     }
 }
 

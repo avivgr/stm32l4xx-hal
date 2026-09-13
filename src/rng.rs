@@ -30,7 +30,7 @@ impl RngExt for RNG {
         // the following setting of rng.cr.rngen has no effect!!
         while !RNG::is_enabled() {}
 
-        self.cr.modify(|_, w| w.rngen().set_bit());
+        self.cr().modify(|_, w| w.rngen().set_bit());
 
         Rng { rng: self }
     }
@@ -66,29 +66,29 @@ impl Rng {
     */
 
     pub fn is_interrupt_enabled(&self) -> bool {
-        self.rng.cr.read().ie().bit()
+        self.rng.cr().read().ie().bit()
     }
 
     pub fn is_enabled(&self) -> bool {
-        self.rng.cr.read().rngen().bit()
+        self.rng.cr().read().rngen().bit()
     }
 
     // RNG_SR
     pub fn is_clock_error(&self) -> bool {
-        self.rng.sr.read().cecs().bit()
+        self.rng.sr().read().cecs().bit()
     }
 
     pub fn is_seed_error(&self) -> bool {
-        self.rng.sr.read().secs().bit()
+        self.rng.sr().read().secs().bit()
     }
 
     pub fn is_data_ready(&self) -> bool {
-        self.rng.sr.read().drdy().bit()
+        self.rng.sr().read().drdy().bit()
     }
 
     // RNG_DR
     pub fn possibly_invalid_random_data(&self) -> u32 {
-        self.rng.dr.read().rndata().bits()
+        self.rng.dr().read().rndata().bits()
     }
 }
 

@@ -663,12 +663,12 @@ macro_rules! dma {
                         #[inline]
                         pub(crate) fn isr(&self) -> dma1::isr::R {
                             // NOTE(unsafe) atomic read with no side effects
-                            unsafe { (*$DMAX::ptr()).isr.read() }
+                            unsafe { (*$DMAX::ptr()).isr().read() }
                         }
 
                         #[inline]
                         pub(crate) fn ifcr(&self) -> &dma1::IFCR {
-                            unsafe { &(*$DMAX::ptr()).ifcr }
+                            unsafe { &(*$DMAX::ptr()).ifcr() }
                         }
 
                         #[inline]
@@ -703,7 +703,7 @@ macro_rules! dma {
                         )))]
                         #[inline]
                         pub(crate) fn cselr(&mut self) -> &dma1::CSELR {
-                            unsafe { &(*$DMAX::ptr()).cselr }
+                            unsafe { &(*$DMAX::ptr()).cselr() }
                         }
 
                         #[inline]

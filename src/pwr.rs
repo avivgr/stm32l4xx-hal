@@ -151,7 +151,7 @@ pub struct CR1 {
 impl CR1 {
     pub(crate) fn reg(&mut self) -> &pwr::CR1 {
         // NOTE(unsafe) this proxy grants exclusive access to this register
-        unsafe { &(*PWR::ptr()).cr1 }
+        unsafe { &(*PWR::ptr()).cr1() }
     }
 }
 /// CR2
@@ -164,7 +164,7 @@ impl CR2 {
     #[allow(dead_code)]
     pub(crate) fn reg(&mut self) -> &pwr::CR2 {
         // NOTE(unsafe) this proxy grants exclusive access to this register
-        unsafe { &(*PWR::ptr()).cr2 }
+        unsafe { &(*PWR::ptr()).cr2() }
     }
 }
 /// CR3
@@ -175,7 +175,7 @@ pub struct CR3 {
 impl CR3 {
     pub(crate) fn reg(&mut self) -> &pwr::CR3 {
         // NOTE(unsafe) this proxy grants exclusive access to this register
-        unsafe { &(*PWR::ptr()).cr3 }
+        unsafe { &(*PWR::ptr()).cr3() }
     }
 }
 /// CR4
@@ -188,7 +188,7 @@ impl CR4 {
     #[allow(dead_code)]
     pub(crate) fn reg(&mut self) -> &pwr::CR4 {
         // NOTE(unsafe) this proxy grants exclusive access to this register
-        unsafe { &(*PWR::ptr()).cr4 }
+        unsafe { &(*PWR::ptr()).cr4() }
     }
 }
 
@@ -200,7 +200,7 @@ pub struct SCR {
 impl SCR {
     pub(crate) fn reg(&mut self) -> &pwr::SCR {
         // NOTE(unsafe) this proxy grants exclusive access to this register
-        unsafe { &(*PWR::ptr()).scr }
+        unsafe { &(*PWR::ptr()).scr() }
     }
 }
 
@@ -212,6 +212,6 @@ pub struct SR1 {
 impl SR1 {
     pub(crate) fn reg(&mut self) -> &pwr::SR1 {
         // NOTE(unsafe) this proxy grants exclusive access to this register
-        unsafe { &(*PWR::ptr()).sr1 }
+        unsafe { &(*PWR::ptr()).sr1() }
     }
 }
