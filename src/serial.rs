@@ -5,7 +5,6 @@
 use core::fmt;
 use core::marker::PhantomData;
 use core::ops::DerefMut;
-use core::ptr;
 use core::sync::atomic::{self, Ordering};
 use embedded_dma::StaticWriteBuffer;
 use stable_deref_trait::StableDeref;
@@ -466,10 +465,7 @@ macro_rules! hal {
                     let isr = unsafe { (*pac::$USARTX::ptr()).isr().read() };
 
                     if isr.rxne().bit_is_set() {
-                        // NOTE(read_volatile) see `write_volatile` below
-                        return Ok(unsafe {
-                            ptr::read_volatile(&(*pac::$USARTX::ptr()).rdr() as *const _ as *const _)
-                        });
+                        return Ok(unsafe { (*pac::$USARTX::ptr()).rdr().read().rdr().bits() as u8 });
                     }
 
                     Err(nb::Error::WouldBlock)
@@ -517,10 +513,10 @@ macro_rules! hal {
                     let isr = unsafe { (*pac::$USARTX::ptr()).isr().read() };
 
                     if isr.txe().bit_is_set() {
-                        // NOTE(unsafe) atomic write to stateless register
-                        // NOTE(write_volatile) 8-bit write that's not possible through the svd2rust API
                         unsafe {
-                            ptr::write_volatile(&(*pac::$USARTX::ptr()).tdr() as *const _ as *mut _, byte)
+                            (*pac::$USARTX::ptr())
+                                .tdr()
+                                .write(|w| w.tdr().set(byte.into()));
                         }
                         Ok(())
                     } else {
@@ -715,7 +711,7 @@ macro_rules! hal {
                 {
                     let (ptr, len) = unsafe { buffer.static_write_buffer() };
                     self.channel.set_peripheral_address(
-                        unsafe { &(*pac::$USARTX::ptr()).rdr() as *const _ as u32 },
+                        unsafe { (*pac::$USARTX::ptr()).rdr().as_ptr() as u32 },
                         false,
                     );
                     self.channel.set_memory_address(ptr as u32, true);
@@ -770,7 +766,7 @@ macro_rules! hal {
 
                     // Setup DMA transfer
                     let buf = &*buffer;
-                    self.channel.set_peripheral_address(&usart.rdr() as *const _ as u32, false);
+                    self.channel.set_peripheral_address(usart.rdr().as_ptr() as u32, false);
                     self.channel.set_memory_address(unsafe { buf.buffer_address_for_dma() } as u32, true);
                     self.channel.set_transfer_length(buf.max_len() as u16);
 
@@ -817,7 +813,7 @@ macro_rules! hal {
                     let usart = unsafe{ &(*pac::$USARTX::ptr()) };
 
                     // Setup DMA
-                    self.channel.set_peripheral_address(&usart.tdr() as *const _ as u32, false);
+                    self.channel.set_peripheral_address(usart.tdr().as_ptr() as u32, false);
 
                     // Tell DMA to request from serial
                     self.channel.set_request_line($dmatxsel).unwrap();

@@ -26,7 +26,6 @@ use crate::gpio::{
 use crate::gpio::{Alternate, PushPull, Speed};
 use crate::rcc::{Enable, AHB3};
 use crate::stm32::QUADSPI;
-use core::ptr;
 
 #[doc(hidden)]
 mod private {
@@ -534,9 +533,7 @@ impl<CLK, NCS, IO0, IO1, IO2, IO3> Qspi<(CLK, NCS, IO0, IO1, IO2, IO3)> {
         while self.qspi.sr().read().tcf().bit_is_clear() {
             if self.qspi.sr().read().ftf().bit_is_set() {
                 if let Some(v) = b.next() {
-                    unsafe {
-                        *v = ptr::read_volatile(&self.qspi.dr() as *const _ as *const u8);
-                    }
+                    *v = self.qspi.dr8().read().data().bits();
                 } else {
                     // OVERFLOW
                 }
@@ -545,9 +542,7 @@ impl<CLK, NCS, IO0, IO1, IO2, IO3> Qspi<(CLK, NCS, IO0, IO1, IO2, IO3)> {
         // When transfer complete, empty fifo buffer
         while self.qspi.sr().read().flevel().bits() > 0 {
             if let Some(v) = b.next() {
-                unsafe {
-                    *v = ptr::read_volatile(&self.qspi.dr() as *const _ as *const u8);
-                }
+                *v = self.qspi.dr8().read().data().bits();
             } else {
                 // OVERFLOW
             }
@@ -562,8 +557,12 @@ impl<CLK, NCS, IO0, IO1, IO2, IO3> Qspi<(CLK, NCS, IO0, IO1, IO2, IO3)> {
                     .bit(self.config.sample_shift == SampleShift::HalfACycle)
             });
         }
+        // Wait for busy to clear
         while self.is_busy() {}
+
+        // Clear transfer complete flag
         self.qspi.fcr().write(|w| w.ctcf().set_bit());
+
         Ok(())
     }
 
@@ -675,9 +674,7 @@ impl<CLK, NCS, IO0, IO1, IO2, IO3> Qspi<(CLK, NCS, IO0, IO1, IO2, IO3)> {
         if let Some((data, _)) = command.data {
             for byte in data {
                 while self.qspi.sr().read().ftf().bit_is_clear() {}
-                unsafe {
-                    ptr::write_volatile(&self.qspi.dr() as *const _ as *mut u8, *byte);
-                }
+                self.qspi.dr8().write(|w| w.data().set(*byte));
             }
         }
 

@@ -5,7 +5,6 @@
 //! don't have it (L432xx and L442xx don't, L452xx does). Users of this MCU variant that
 //! don't have it shouldn't attempt to use it. Relevant info is on user-manual level.
 
-use core::ptr;
 use core::sync::atomic;
 use core::sync::atomic::Ordering;
 
@@ -247,11 +246,7 @@ macro_rules! hal {
                     } else if sr.crcerr().bit_is_set() {
                         nb::Error::Other(Error::Crc)
                     } else if sr.rxne().bit_is_set() {
-                        // NOTE(read_volatile) read only 1 byte (the svd2rust API only allows
-                        // reading a half-word)
-                        return Ok(unsafe {
-                            ptr::read_volatile(&self.spi.dr() as *const _ as *const u8)
-                        });
+                        return Ok(self.spi.dr8().read().dr().bits());
                     } else {
                         nb::Error::WouldBlock
                     })
@@ -267,8 +262,7 @@ macro_rules! hal {
                     } else if sr.crcerr().bit_is_set() {
                         nb::Error::Other(Error::Crc)
                     } else if sr.txe().bit_is_set() {
-                        // NOTE(write_volatile) see note above
-                        unsafe { ptr::write_volatile(&self.spi.dr() as *const _ as *mut u8, byte) }
+                        self.spi.dr8().write(|w| w.dr().set(byte));
                         return Ok(());
                     } else {
                         nb::Error::WouldBlock
@@ -411,10 +405,8 @@ macro_rules! spi_dma {
 
                 // Perform one-time setup actions to keep the work minimal when using the driver.
 
-                channel.set_peripheral_address(
-                    unsafe { &(*$SPIX::ptr()).dr() as *const _ as u32 },
-                    false,
-                );
+                channel
+                    .set_peripheral_address(unsafe { (*$SPIX::ptr()).dr().as_ptr() as u32 }, false);
                 channel.set_request_line($RX_CHSEL).unwrap();
                 channel.ccr().modify(|_, w| {
                     w
@@ -446,10 +438,8 @@ macro_rules! spi_dma {
 
                 // Perform one-time setup actions to keep the work minimal when using the driver.
 
-                channel.set_peripheral_address(
-                    unsafe { &(*$SPIX::ptr()).dr() as *const _ as u32 },
-                    false,
-                );
+                channel
+                    .set_peripheral_address(unsafe { (*$SPIX::ptr()).dr().as_ptr() as u32 }, false);
                 channel.set_request_line($TX_CHSEL).unwrap();
                 channel.ccr().modify(|_, w| {
                     w
@@ -488,10 +478,8 @@ macro_rules! spi_dma {
                 //
                 // Setup RX channel
                 //
-                rx_channel.set_peripheral_address(
-                    unsafe { &(*$SPIX::ptr()).dr() as *const _ as u32 },
-                    false,
-                );
+                rx_channel
+                    .set_peripheral_address(unsafe { (*$SPIX::ptr()).dr().as_ptr() as u32 }, false);
                 rx_channel.set_request_line($RX_CHSEL).unwrap();
 
                 rx_channel.ccr().modify(|_, w| {
@@ -519,10 +507,8 @@ macro_rules! spi_dma {
                 //
                 // Setup TX channel
                 //
-                tx_channel.set_peripheral_address(
-                    unsafe { &(*$SPIX::ptr()).dr() as *const _ as u32 },
-                    false,
-                );
+                tx_channel
+                    .set_peripheral_address(unsafe { (*$SPIX::ptr()).dr().as_ptr() as u32 }, false);
                 tx_channel.set_request_line($TX_CHSEL).unwrap();
 
                 tx_channel.ccr().modify(|_, w| {
