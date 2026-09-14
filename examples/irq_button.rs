@@ -26,7 +26,7 @@ static BUTTON: Mutex<RefCell<Option<PC13<Input<PullUp>>>>> = Mutex::new(RefCell:
 #[entry]
 fn main() -> ! {
     if let Some(mut dp) = stm32::Peripherals::take() {
-        dp.RCC.apb2enr.write(|w| w.syscfgen().set_bit());
+        dp.RCC.apb2enr().write(|w| w.syscfgen().set_bit());
 
         let mut rcc = dp.RCC.constrain();
         let mut flash = dp.FLASH.constrain(); // .constrain();

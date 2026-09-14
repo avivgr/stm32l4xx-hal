@@ -13,24 +13,24 @@ use usbd_serial::{SerialPort, USB_CLASS_CDC};
 
 fn enable_crs() {
     let rcc = unsafe { &(*stm32::RCC::ptr()) };
-    rcc.apb1enr1.modify(|_, w| w.crsen().set_bit());
+    rcc.apb1enr1().modify(|_, w| w.crsen().set_bit());
     let crs = unsafe { &(*stm32::CRS::ptr()) };
     // Initialize clock recovery
     // Set autotrim enabled.
-    crs.cr.modify(|_, w| w.autotrimen().set_bit());
+    crs.cr().modify(|_, w| w.autotrimen().set_bit());
     // Enable CR
-    crs.cr.modify(|_, w| w.cen().set_bit());
+    crs.cr().modify(|_, w| w.cen().set_bit());
 }
 
 /// Enables VddUSB power supply
 fn enable_usb_pwr() {
     // Enable PWR peripheral
     let rcc = unsafe { &(*stm32::RCC::ptr()) };
-    rcc.apb1enr1.modify(|_, w| w.pwren().set_bit());
+    rcc.apb1enr1().modify(|_, w| w.pwren().set_bit());
 
     // Enable VddUSB
     let pwr = unsafe { &*stm32::PWR::ptr() };
-    pwr.cr2.modify(|_, w| w.usv().set_bit());
+    pwr.cr2().modify(|_, w| w.usv().set_bit());
 }
 
 #[entry]

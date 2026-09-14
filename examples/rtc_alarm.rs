@@ -32,7 +32,7 @@ fn main() -> ! {
     writeln!(hstdout, "Hello, world!").unwrap();
 
     let mut dp = hal::stm32::Peripherals::take().unwrap();
-    dp.RCC.apb2enr.write(|w| w.syscfgen().set_bit());
+    dp.RCC.apb2enr().write(|w| w.syscfgen().set_bit());
 
     let mut flash = dp.FLASH.constrain();
     let mut rcc = dp.RCC.constrain();
