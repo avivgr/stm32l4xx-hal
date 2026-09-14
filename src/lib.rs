@@ -124,7 +124,7 @@ pub mod traits;
 #[cfg(not(any(feature = "stm32l4r9", feature = "stm32l4s9",)))]
 pub mod adc;
 #[cfg(not(any(feature = "stm32l4r9", feature = "stm32l4s9",)))]
-#[cfg(not(any(feature = "stm32l412",)))]
+#[cfg(not(any(feature = "stm32l412", feature = "stm32l422")))]
 pub mod can;
 pub mod crc;
 pub mod delay;

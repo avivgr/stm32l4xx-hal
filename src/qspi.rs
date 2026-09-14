@@ -3,14 +3,16 @@
 use crate::gpio::{
     gpioa::{PA6, PA7},
     gpiob::{PB0, PB1, PB10, PB11},
-    gpioe::{PE10, PE11, PE12, PE13, PE14, PE15},
 };
 
+#[cfg(not(any(feature = "stm32l412", feature = "stm32l422")))]
+use crate::gpio::gpioe::{PE10, PE11, PE12, PE13, PE14, PE15};
+
 #[cfg(not(any(feature = "stm32l475")))]
-use crate::gpio::{
-    gpioa::{PA2, PA3},
-    gpiod::{PD3, PD4, PD5, PD6, PD7},
-};
+use crate::gpio::gpioa::{PA2, PA3};
+
+#[cfg(not(any(feature = "stm32l412", feature = "stm32l422", feature = "stm32l475",)))]
+use crate::gpio::gpiod::{PD3, PD4, PD5, PD6, PD7};
 
 #[cfg(any(
     feature = "stm32l476",
@@ -697,12 +699,24 @@ impl<CLK, NCS, IO0, IO1, IO2, IO3> Qspi<(CLK, NCS, IO0, IO1, IO2, IO3)> {
 pins!(
     QUADSPI,
     10,
-    CLK: [PE10, PB10],
-    nCS: [PE11, PB11],
-    IO0: [PE12, PB1],
-    IO1: [PE13, PB0],
-    IO2: [PE14, PA7],
-    IO3: [PE15, PA6]
+    CLK: [PB10],
+    nCS: [PB11],
+    IO0: [PB1],
+    IO1: [PB0],
+    IO2: [PA7],
+    IO3: [PA6]
+);
+
+#[cfg(not(any(feature = "stm32l412", feature = "stm32l422")))]
+pins!(
+    QUADSPI,
+    10,
+    CLK: [PE10],
+    nCS: [PE11],
+    IO0: [PE12],
+    IO1: [PE13],
+    IO2: [PE14],
+    IO3: [PE15]
 );
 
 #[cfg(not(any(feature = "stm32l475")))]
@@ -710,7 +724,19 @@ pins!(
     QUADSPI,
     10,
     CLK: [PA3],
-    nCS: [PA2, PD3],
+    nCS: [PA2],
+    IO0: [],
+    IO1: [],
+    IO2: [],
+    IO3: []
+);
+
+#[cfg(not(any(feature = "stm32l412", feature = "stm32l422", feature = "stm32l475",)))]
+pins!(
+    QUADSPI,
+    10,
+    CLK: [],
+    nCS: [PD3],
     IO0: [PD4],
     IO1: [PD5],
     IO2: [PD6],

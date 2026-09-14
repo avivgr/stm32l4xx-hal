@@ -8,7 +8,12 @@
 use core::sync::atomic;
 use core::sync::atomic::Ordering;
 
-#[cfg(not(any(feature = "stm32l433", feature = "stm32l443",)))]
+#[cfg(not(any(
+    feature = "stm32l412",
+    feature = "stm32l422",
+    feature = "stm32l433",
+    feature = "stm32l443",
+)))]
 use crate::dma::dma2;
 use crate::dma::{self, dma1, TransferPayload};
 use crate::dmamux::{DmaInput, DmaMux};
@@ -277,7 +282,10 @@ macro_rules! hal {
     }
 }
 
+#[cfg(not(any(feature = "stm32l412", feature = "stm32l422")))]
 use crate::gpio::gpiod::*;
+#[cfg(not(any(feature = "stm32l412", feature = "stm32l422")))]
+use crate::gpio::gpioe::*;
 #[cfg(any(
     // feature = "stm32l471",  // missing PAC support for Port G
     feature = "stm32l475",
@@ -296,7 +304,7 @@ use crate::gpio::gpiod::*;
     feature = "stm32l4s9",
 ))]
 use crate::gpio::gpiog::*;
-use crate::gpio::{gpioa::*, gpiob::*, gpioc::*, gpioe::*};
+use crate::gpio::{gpioa::*, gpiob::*, gpioc::*};
 
 use crate::stm32::SPI1;
 hal! {
@@ -304,9 +312,15 @@ hal! {
 }
 
 pins!(SPI1, 5,
-    SCK: [PA5, PB3, PE13],
-    MISO: [PA6, PB4, PE14],
-    MOSI: [PA7, PB5, PE15]);
+    SCK: [PA5, PB3],
+    MISO: [PA6, PB4],
+    MOSI: [PA7, PB5]);
+
+#[cfg(not(any(feature = "stm32l412", feature = "stm32l422")))]
+pins!(SPI1, 5,
+    SCK: [PE13],
+    MISO: [PE14],
+    MOSI: [PE15]);
 
 #[cfg(any(
     // feature = "stm32l471", // missing PAC support for Port G
@@ -327,15 +341,30 @@ pins!(SPI1, 5,
 ))]
 pins!(SPI1, 5, SCK: [PG2], MISO: [PG3], MOSI: [PG4]);
 
-#[cfg(not(any(feature = "stm32l433", feature = "stm32l443",)))]
+#[cfg(not(any(
+    feature = "stm32l412",
+    feature = "stm32l422",
+    feature = "stm32l433",
+    feature = "stm32l443",
+)))]
 use crate::stm32::SPI3;
 
-#[cfg(not(any(feature = "stm32l433", feature = "stm32l443",)))]
+#[cfg(not(any(
+    feature = "stm32l412",
+    feature = "stm32l422",
+    feature = "stm32l433",
+    feature = "stm32l443",
+)))]
 hal! {
     SPI3: (spi3, spi3_slave, pclk1),
 }
 
-#[cfg(not(any(feature = "stm32l433", feature = "stm32l443",)))]
+#[cfg(not(any(
+    feature = "stm32l412",
+    feature = "stm32l422",
+    feature = "stm32l433",
+    feature = "stm32l443",
+)))]
 pins!(SPI3, 6,
     SCK: [PB3, PC10],
     MISO: [PB4, PC11],
@@ -367,9 +396,15 @@ hal! {
 }
 
 pins!(SPI2, 5,
-    SCK: [PB13, PB10, PD1],
-    MISO: [PB14, PC2, PD3],
-    MOSI: [PB15, PC3, PD4]);
+    SCK: [PB13, PB10],
+    MISO: [PB14, PC2],
+    MOSI: [PB15, PC3]);
+
+#[cfg(not(any(feature = "stm32l412", feature = "stm32l422")))]
+pins!(SPI2, 5,
+    SCK: [PD1],
+    MISO: [PD3],
+    MOSI: [PD4]);
 
 pub struct SpiPayload<SPI, PINS> {
     spi: Spi<SPI, PINS>,
@@ -789,5 +824,10 @@ spi_dma!(SPI1, dma1::C2, DmaInput::Spi1Rx, dma1::C3, DmaInput::Spi1Tx);
 )))]
 spi_dma!(SPI2, dma1::C4, DmaInput::Spi2Rx, dma1::C5, DmaInput::Spi2Tx);
 // spi_dma!(SPI1, dma2::C3, c3s, map4, dma2::C4, c4s, map4);
-#[cfg(not(any(feature = "stm32l433", feature = "stm32l443",)))]
+#[cfg(not(any(
+    feature = "stm32l412",
+    feature = "stm32l422",
+    feature = "stm32l433",
+    feature = "stm32l443",
+)))]
 spi_dma!(SPI3, dma2::C1, DmaInput::Spi3Rx, dma2::C2, DmaInput::Spi3Tx);

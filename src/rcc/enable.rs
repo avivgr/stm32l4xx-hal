@@ -105,24 +105,18 @@ bus! {
     GPIOA => (AHB2, gpioaen, gpioasmen, gpioarst), // 0
     GPIOB => (AHB2, gpioben, gpiobsmen, gpiobrst), // 1
     GPIOC => (AHB2, gpiocen, gpiocsmen, gpiocrst), // 2
-    GPIOD => (AHB2, gpioden, gpiodsmen, gpiodrst), // 3
-    GPIOE => (AHB2, gpioeen, gpioesmen, gpioerst), // 4
     GPIOH => (AHB2, gpiohen, gpiohsmen, gpiohrst), // 7
-    AES => (AHB2, aesen, aessmen, aesrst), // 16
     RNG => (AHB2, rngen, rngsmen, rngrst), // 18
 
     TIM2 => (APB1R1, tim2en, tim2smen, tim2rst), // 0
     TIM6 => (APB1R1, tim6en, tim6smen, tim6rst), // 4
-    TIM7 => (APB1R1, tim7en, tim7smen, tim7rst), // 5
     WWDG => (APB1R1, wwdgen, wwdgsmen,), // 11
     SPI2 => (APB1R1, spi2en, spi2smen, spi2rst), // 14
-    SPI3 => (APB1R1, spi3en, sp3smen, spi3rst), // 15 // TODO: fix typo
     USART2 => (APB1R1, usart2en, usart2smen, usart2rst), // 17
     USART3 => (APB1R1, usart3en, usart3smen, usart3rst), // 18
     I2C1 => (APB1R1, i2c1en, i2c1smen, i2c1rst), // 21
     I2C2 => (APB1R1, i2c2en, i2c2smen, i2c2rst), // 22
     I2C3 => (APB1R1, i2c3en, i2c3smen, i2c3rst), // 23
-    CAN1 => (APB1R1, can1en, can1smen, can1rst), // 25
     PWR => (APB1R1, pwren, pwrsmen, pwrrst), // 28
     OPAMP => (APB1R1, opampen, opampsmen, opamprst), // 30
     LPTIM1 => (APB1R1, lptim1en, lptim1smen, lptim1rst), // 31
@@ -136,7 +130,45 @@ bus! {
     USART1 => (APB2, usart1en, usart1smen, usart1rst), // 14
     TIM15 => (APB2, tim15en, tim15smen, tim15rst), // 16
     TIM16 => (APB2, tim16en, tim16smen, tim16rst), // 17
+}
+
+#[cfg(not(any(feature = "stm32l412", feature = "stm32l422")))]
+bus! {
+    GPIOD => (AHB2, gpioden, gpiodsmen, gpiodrst), // 3
+    GPIOE => (AHB2, gpioeen, gpioesmen, gpioerst), // 4
+    AES => (AHB2, aesen, aessmen, aesrst), // 16
     SAI1 => (APB2, sai1en, sai1smen, sai1rst), // 21
+}
+
+#[cfg(not(any(
+    feature = "stm32l412",
+    feature = "stm32l422",
+    feature = "stm32l451",
+    feature = "stm32l452",
+    feature = "stm32l462",
+)))]
+bus! {
+    TIM7 => (APB1R1, tim7en, tim7smen, tim7rst), // 5
+}
+
+#[cfg(not(any(
+    feature = "stm32l412",
+    feature = "stm32l422",
+    feature = "stm32l433",
+    feature = "stm32l443",
+)))]
+bus! {
+    SPI3 => (APB1R1, spi3en, sp3smen, spi3rst), // 15 // TODO: fix typo
+}
+
+#[cfg(not(any(
+    feature = "stm32l412",
+    feature = "stm32l422",
+    feature = "stm32l4r9",
+    feature = "stm32l4s9",
+)))]
+bus! {
+    CAN1 => (APB1R1, can1en, can1smen, can1rst), // 25
 }
 
 // L4x1, L4x2, L4x3, L4x5 or L4x6
@@ -153,11 +185,19 @@ bus! {
 bus! {
     ADC_COMMON => (AHB2, adcen, adcfssmen, adcrst), // 13
 
+    FIREWALL => (APB2, firewallen,,), // 7
+}
+
+#[cfg(not(any(
+    feature = "stm32l412",
+    feature = "stm32l422",
+    feature = "stm32l4r9",
+    feature = "stm32l4s9",
+)))]
+bus! {
     LCD => (APB1R1, lcden, lcdsmen, lcdrst), // 9
 
     SWPMI1 => (APB1R2, swpmi1en, swpmi1smen, swpmi1rst), // 2
-
-    FIREWALL => (APB2, firewallen,,), // 7
 }
 
 // L4+
@@ -217,8 +257,6 @@ bus! {
     feature = "stm32l431",
     feature = "stm32l451",
     feature = "stm32l471",
-    feature = "stm32l412",
-    feature = "stm32l422",
     feature = "stm32l432",
     feature = "stm32l442",
     feature = "stm32l452",
@@ -296,8 +334,6 @@ bus! {
 
 // L4x2
 #[cfg(any(
-    feature = "stm32l412",
-    feature = "stm32l422",
     feature = "stm32l432",
     feature = "stm32l442",
     feature = "stm32l452",

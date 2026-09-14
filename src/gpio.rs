@@ -683,6 +683,7 @@ gpio!(GPIOC, gpioc, PCx, 'C', 2, [
     PC15: (pc15, 15, Analog, H8, exticr4),
 ]);
 
+#[cfg(not(any(feature = "stm32l412", feature = "stm32l422")))]
 gpio!(GPIOD, gpiod, PDx, 'D', 3, [
     PD0: (pd0, 0, Analog, L8, exticr1),
     PD1: (pd1, 1, Analog, L8, exticr1),
@@ -702,6 +703,7 @@ gpio!(GPIOD, gpiod, PDx, 'D', 3, [
     PD15: (pd15, 15, Analog, H8, exticr4),
 ]);
 
+#[cfg(not(any(feature = "stm32l412", feature = "stm32l422")))]
 gpio!(GPIOE, gpioe, PEx, 'E', 4, [
     PE0: (pe0, 0, Analog, L8, exticr1),
     PE1: (pe1, 1, Analog, L8, exticr1),
@@ -837,7 +839,9 @@ impl<const P: char> Gpio<P> {
             'A' => crate::pac::GPIOA::ptr(),
             'B' => crate::pac::GPIOB::ptr() as _,
             'C' => crate::pac::GPIOC::ptr() as _,
+            #[cfg(not(any(feature = "stm32l412", feature = "stm32l422")))]
             'D' => crate::pac::GPIOD::ptr() as _,
+            #[cfg(not(any(feature = "stm32l412", feature = "stm32l422")))]
             'E' => crate::pac::GPIOE::ptr() as _,
             #[cfg(any(
                 // feature = "stm32l471",  // missing PAC support for Port F
