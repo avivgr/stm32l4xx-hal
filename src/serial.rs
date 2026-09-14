@@ -464,7 +464,12 @@ macro_rules! hal {
                     // NOTE(unsafe) atomic read with no side effects
                     let isr = unsafe { (*pac::$USARTX::ptr()).isr().read() };
 
-                    if isr.rxne().bit_is_set() {
+                    #[cfg(any(feature = "stm32l4r9", feature = "stm32l4s9"))]
+                    let rx_ready = isr.rxfne().bit_is_set();
+                    #[cfg(not(any(feature = "stm32l4r9", feature = "stm32l4s9")))]
+                    let rx_ready = isr.rxne().bit_is_set();
+
+                    if rx_ready {
                         return Ok(unsafe { (*pac::$USARTX::ptr()).rdr().read().rdr().bits() as u8 });
                     }
 
@@ -512,7 +517,12 @@ macro_rules! hal {
                     // NOTE(unsafe) atomic read with no side effects
                     let isr = unsafe { (*pac::$USARTX::ptr()).isr().read() };
 
-                    if isr.txe().bit_is_set() {
+                    #[cfg(any(feature = "stm32l4r9", feature = "stm32l4s9"))]
+                    let tx_ready = isr.txfnf().bit_is_set();
+                    #[cfg(not(any(feature = "stm32l4r9", feature = "stm32l4s9")))]
+                    let tx_ready = isr.txe().bit_is_set();
+
+                    if tx_ready {
                         unsafe {
                             (*pac::$USARTX::ptr())
                                 .tdr()
@@ -587,6 +597,12 @@ macro_rules! hal {
                         icr.write(|w| w.fecf().clear());
                         return Err(Error::Framing);
                     }
+                    #[cfg(any(feature = "stm32l4r9", feature = "stm32l4s9"))]
+                    if isr.ne().bit_is_set() {
+                        icr.write(|w| w.necf().clear());
+                        return Err(Error::Noise);
+                    }
+                    #[cfg(not(any(feature = "stm32l4r9", feature = "stm32l4s9")))]
                     if isr.nf().bit_is_set() {
                         icr.write(|w| w.ncf().clear());
                         return Err(Error::Noise);

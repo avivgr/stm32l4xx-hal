@@ -171,6 +171,10 @@ bus! {
     CAN1 => (APB1R1, can1en, can1smen, can1rst), // 25
 }
 
+bus! {
+    ADC_COMMON => (AHB2, adcen, adcfssmen, adcrst), // 13
+}
+
 // L4x1, L4x2, L4x3, L4x5 or L4x6
 #[cfg(not(any(
     // feature = "stm32l4p5",
@@ -183,8 +187,6 @@ bus! {
     feature = "stm32l4s9",
 )))]
 bus! {
-    ADC_COMMON => (AHB2, adcen, adcfssmen, adcrst), // 13
-
     FIREWALL => (APB2, firewallen,,), // 7
 }
 
@@ -212,10 +214,8 @@ bus! {
     feature = "stm32l4s9",
 ))]
 bus! {
-    ADC => (AHB2, adcen, adcfssmen, adcrst), // 13
-
     FIREWALL => (APB2, fwen,,), // 7
-    LTCD => (APB2, ltdcen, ltdcsmen, ltdcrst), // 26
+    LTDC => (APB2, ltdcen, ltdcsmen, ltdcrst), // 26
 }
 
 // L4x5 or L4x6

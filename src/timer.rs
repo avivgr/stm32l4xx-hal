@@ -105,7 +105,7 @@ macro_rules! hal {
 
                     let arr = u16(ticks / u32(psc + 1)).unwrap();
 
-                    self.tim.arr().write(|w| unsafe { w.bits(u32(arr)) });
+                    self.tim.arr().write(|w| unsafe { w.bits(arr.into()) });
 
                     // Trigger an update event to load the prescaler value to the clock.
                     self.tim.egr().write(|w| w.ug().set_bit());
