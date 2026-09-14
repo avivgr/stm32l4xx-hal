@@ -776,7 +776,7 @@ gpio!(GPIOF, gpiof, PFx, 'F', 5, [
     feature = "stm32l4s9",
 ))]
 gpio!(GPIOG, gpiog, PGx, 'G', 6,
-    { unsafe { (*crate::pac::PWR::ptr()).cr2.modify(|_,w| w.iosv().set_bit()); } },
+    { unsafe { (*crate::pac::PWR::ptr()).cr2().modify(|_,w| w.iosv().set_bit()); } },
 [
     PG0: (pg0, 0, Analog, L8, exticr1),
     PG1: (pg1, 1, Analog, L8, exticr1),

@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 
+## [Unreleased]
+
+### Breaking Changes
+
+- Bump `stm32l4` PAC from 0.14.0 to 0.16.0.
+- `I2C4` peripheral support is temporarily removed for `stm32l451`. The `stm32l4x1` module in PAC 0.16 currently omits the `I2C4` definition present in physical STM32L451 hardware; an upstream issue/inquiry should be submitted to `stm32-rs` to restore `I2C4` in `stm32l4x1` or introduce a dedicated `stm32l451` SVD.
+
 ## [v0.7.1] - 2022-04-11
 
 ### Fixed

@@ -92,9 +92,40 @@ impl Pwr {
 
         if wkup.internal_wkup() {
             // Can't apply directly due to the APC and RPS bits
+            #[cfg(any(
+                feature = "stm32l412",
+                feature = "stm32l422",
+                feature = "stm32l432",
+                feature = "stm32l442",
+                feature = "stm32l452",
+                feature = "stm32l462",
+                feature = "stm32l4r9",
+                feature = "stm32l4s9",
+            ))]
             self.cr3.reg().modify(|_, w| w.eiwul().set_bit());
+            #[cfg(not(any(
+                feature = "stm32l412",
+                feature = "stm32l422",
+                feature = "stm32l432",
+                feature = "stm32l442",
+                feature = "stm32l452",
+                feature = "stm32l462",
+                feature = "stm32l4r9",
+                feature = "stm32l4s9",
+            )))]
+            self.cr3.reg().modify(|_, w| w.ewf().set_bit());
         }
         scb.set_sleepdeep();
+        #[cfg(any(
+            feature = "stm32l412",
+            feature = "stm32l422",
+            feature = "stm32l432",
+            feature = "stm32l442",
+            feature = "stm32l452",
+            feature = "stm32l462",
+            feature = "stm32l4r9",
+            feature = "stm32l4s9",
+        ))]
         self.scr.reg().write(|w| {
             w.cwuf1()
                 .set_bit()
@@ -107,6 +138,30 @@ impl Pwr {
                 .cwuf5()
                 .set_bit()
                 .csbf()
+                .set_bit()
+        });
+        #[cfg(not(any(
+            feature = "stm32l412",
+            feature = "stm32l422",
+            feature = "stm32l432",
+            feature = "stm32l442",
+            feature = "stm32l452",
+            feature = "stm32l462",
+            feature = "stm32l4r9",
+            feature = "stm32l4s9",
+        )))]
+        self.scr.reg().write(|w| {
+            w.wuf1()
+                .set_bit()
+                .wuf2()
+                .set_bit()
+                .wuf3()
+                .set_bit()
+                .wuf4()
+                .set_bit()
+                .wuf5()
+                .set_bit()
+                .sbf()
                 .set_bit()
         });
         unsafe { self.cr1.reg().modify(|_, w| w.lpms().bits(0b111)) };

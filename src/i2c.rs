@@ -5,7 +5,7 @@
 use crate::hal::blocking::i2c::{Read, Write, WriteRead};
 
 #[cfg(any(
-    feature = "stm32l451",
+    // feature = "stm32l451", // missing PAC support
     feature = "stm32l452",
     feature = "stm32l462",
     feature = "stm32l496",
@@ -201,7 +201,7 @@ hal!(I2C2, i2c2);
 hal!(I2C3, i2c3);
 
 #[cfg(any(
-    feature = "stm32l451",
+    // feature = "stm32l451", // missing PAC support
     feature = "stm32l452",
     feature = "stm32l462",
     feature = "stm32l496",
@@ -470,8 +470,8 @@ where
 
 #[cfg(any(feature = "stm32l431", feature = "stm32l451", feature = "stm32l471"))]
 mod stm32l4x1_pins {
-    #[cfg(any(feature = "stm32l451"))]
-    use super::I2C4;
+    // #[cfg(any(feature = "stm32l451"))]
+    // use super::I2C4;
     use super::{I2C1, I2C2, I2C3};
     use crate::gpio::*;
     #[cfg(not(feature = "stm32l471"))]
@@ -492,10 +492,10 @@ mod stm32l4x1_pins {
 
     #[cfg(not(feature = "stm32l471"))]
     pins!(I2C3, 4, SCL: [PA7], SDA: [PB4]);
-    #[cfg(not(any(feature = "stm32l431", feature = "stm32l471")))]
-    pins!(I2C4, 4, SCL: [PD12], SDA: [PD13]);
-    #[cfg(not(any(feature = "stm32l431", feature = "stm32l471")))]
-    pins!(I2C4, 3, SCL: [PB10], SDA: [PB11]);
+    // #[cfg(not(any(feature = "stm32l431", feature = "stm32l471")))]
+    // pins!(I2C4, 4, SCL: [PD12], SDA: [PD13]);
+    // #[cfg(not(any(feature = "stm32l431", feature = "stm32l471")))]
+    // pins!(I2C4, 3, SCL: [PB10], SDA: [PB11]);
 }
 
 #[cfg(any(

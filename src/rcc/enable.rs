@@ -264,8 +264,17 @@ bus! {
 ))]
 bus! {
     UART4 => (APB1R1, uart4en, uart4smen, usart4rst), // 19 // TODO: fix typo
+}
 
-    I2C4 => (APB1R2, i2c4en,, i2c4rst), // 1 // TODO: fix absent
+// L4x2
+#[cfg(any(
+    feature = "stm32l432",
+    feature = "stm32l442",
+    feature = "stm32l452",
+    feature = "stm32l462",
+))]
+bus! {
+    I2C4 => (APB1R2, i2c4en,, i2c4rst), // 1
 }
 
 // L4x1, L4x2, L4x3, or L4x5
@@ -388,7 +397,7 @@ bus! {
     HASH => (AHB2, hash1en, hash1smen, hash1rst), // 17
 
     SDMMC1 => (APB2, sdmmcen, sdmmcsmen, sdmmcrst), // 10
-    DFSDM1 => (APB2, dfsdmen, dfsdmsmen, dfsdmrst), // 24
+    DFSDM => (APB2, dfsdmen, dfsdmsmen, dfsdmrst), // 24
 }
 
 #[cfg(any(
