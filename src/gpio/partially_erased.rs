@@ -37,7 +37,9 @@ impl<MODE, const P: char> PartiallyErasedPin<Output<MODE>, P> {
     #[inline(always)]
     pub fn set_high(&mut self) {
         // NOTE(unsafe) atomic write to a stateless register
-        unsafe { (*Gpio::<P>::ptr()).bsrr().write(|w| w.bits(1 << self.i)) }
+        unsafe {
+            (*Gpio::<P>::ptr()).bsrr().write(|w| w.bits(1 << self.i));
+        }
     }
 
     #[inline(always)]
@@ -46,7 +48,7 @@ impl<MODE, const P: char> PartiallyErasedPin<Output<MODE>, P> {
         unsafe {
             (*Gpio::<P>::ptr())
                 .bsrr()
-                .write(|w| w.bits(1 << (self.i + 16)))
+                .write(|w| w.bits(1 << (self.i + 16)));
         }
     }
 

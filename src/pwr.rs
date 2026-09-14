@@ -55,7 +55,7 @@ impl Pwr {
                 {
                     self.cr1
                         .reg()
-                        .modify(|_, w| w.vos().bits(VosRange::HighPerformance as u8))
+                        .modify(|_, w| w.vos().bits(VosRange::HighPerformance as u8));
                 }
                 Ok(())
             },
@@ -66,7 +66,7 @@ impl Pwr {
                     unsafe {
                         self.cr1
                             .reg()
-                            .modify(|_, w| w.vos().bits(VosRange::LowPower as u8))
+                            .modify(|_, w| w.vos().bits(VosRange::LowPower as u8));
                     }
                     Ok(())
                 }
@@ -92,21 +92,21 @@ impl Pwr {
 
         if wkup.internal_wkup() {
             // Can't apply directly due to the APC and RPS bits
-            self.cr3.reg().modify(|_, w| w.ewf().set_bit())
+            self.cr3.reg().modify(|_, w| w.eiwul().set_bit());
         }
         scb.set_sleepdeep();
         self.scr.reg().write(|w| {
-            w.wuf1()
+            w.cwuf1()
                 .set_bit()
-                .wuf2()
+                .cwuf2()
                 .set_bit()
-                .wuf3()
+                .cwuf3()
                 .set_bit()
-                .wuf4()
+                .cwuf4()
                 .set_bit()
-                .wuf5()
+                .cwuf5()
                 .set_bit()
-                .sbf()
+                .csbf()
                 .set_bit()
         });
         unsafe { self.cr1.reg().modify(|_, w| w.lpms().bits(0b111)) };

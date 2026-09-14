@@ -346,25 +346,25 @@ impl Rtc {
             Event::WakeupTimer => {
                 exti.rtsr1().modify(|_, w| w.tr20().set_bit());
                 exti.imr1().modify(|_, w| w.mr20().set_bit());
-                rtc.cr().modify(|_, w| w.wutie().set_bit())
+                rtc.cr().modify(|_, w| w.wutie().set_bit());
             }
             Event::AlarmA => {
                 // Workaround until tr17() is implemented ()
                 exti.rtsr1().modify(|_, w| w.tr18().set_bit());
                 exti.imr1().modify(|_, w| w.mr18().set_bit());
-                rtc.cr().modify(|_, w| w.alraie().set_bit())
+                rtc.cr().modify(|_, w| w.alraie().set_bit());
             }
             Event::AlarmB => {
                 exti.rtsr1().modify(|_, w| w.tr18().set_bit());
                 exti.imr1().modify(|_, w| w.mr18().set_bit());
-                rtc.cr().modify(|_, w| w.alrbie().set_bit())
+                rtc.cr().modify(|_, w| w.alrbie().set_bit());
             }
             Event::Timestamp => {
                 exti.rtsr1().modify(|_, w| w.tr19().set_bit());
                 exti.imr1().modify(|_, w| w.mr19().set_bit());
-                rtc.cr().modify(|_, w| w.tsie().set_bit())
+                rtc.cr().modify(|_, w| w.tsie().set_bit());
             }
-        })
+        });
     }
 
     /// Stops listening for an interrupt event
@@ -373,25 +373,25 @@ impl Rtc {
             Event::WakeupTimer => {
                 exti.rtsr1().modify(|_, w| w.tr20().clear_bit());
                 exti.imr1().modify(|_, w| w.mr20().clear_bit());
-                rtc.cr().modify(|_, w| w.wutie().clear_bit())
+                rtc.cr().modify(|_, w| w.wutie().clear_bit());
             }
             Event::AlarmA => {
                 // Workaround until tr17() is implemented ()
                 exti.rtsr1().modify(|_, w| w.tr18().clear_bit());
                 exti.imr1().modify(|_, w| w.mr18().clear_bit());
-                rtc.cr().modify(|_, w| w.alraie().clear_bit())
+                rtc.cr().modify(|_, w| w.alraie().clear_bit());
             }
             Event::AlarmB => {
                 exti.rtsr1().modify(|_, w| w.tr18().clear_bit());
                 exti.imr1().modify(|_, w| w.mr18().clear_bit());
-                rtc.cr().modify(|_, w| w.alrbie().clear_bit())
+                rtc.cr().modify(|_, w| w.alrbie().clear_bit());
             }
             Event::Timestamp => {
                 exti.rtsr1().modify(|_, w| w.tr19().clear_bit());
                 exti.imr1().modify(|_, w| w.mr19().clear_bit());
-                rtc.cr().modify(|_, w| w.tsie().clear_bit())
+                rtc.cr().modify(|_, w| w.tsie().clear_bit());
             }
-        })
+        });
     }
 
     /// Checks for an interrupt event

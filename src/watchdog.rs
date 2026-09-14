@@ -75,8 +75,8 @@ impl IndependentWatchdog {
         let rl = (timeout_ms.ticks() * max_rl / max_period).min(max_rl) as u16;
 
         self.access_registers(|iwdg| {
-            iwdg.pr().modify(|_, w| w.pr().bits(pr));
-            iwdg.rlr().modify(|_, w| w.rl().bits(rl));
+            iwdg.pr().modify(|_, w| unsafe { w.pr().bits(pr) });
+            iwdg.rlr().modify(|_, w| unsafe { w.rl().bits(rl) });
         });
     }
 

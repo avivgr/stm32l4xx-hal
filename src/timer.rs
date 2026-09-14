@@ -183,7 +183,7 @@ macro_rules! hal {
                     debug_assert!(frequency.raw() > 0);
                     debug_assert!(psc <= core::u16::MAX.into());
 
-                    tim.psc().write(|w| w.psc().bits((psc as u16).into()) );
+                    tim.psc().write(|w| unsafe { w.psc().bits((psc as u16).into()) });
                     let max = core::$width::MAX;
                     tim.arr().write(|w| unsafe { w.bits(max.into()) });
 

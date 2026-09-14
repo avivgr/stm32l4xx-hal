@@ -447,12 +447,16 @@ impl<MODE, HL, const P: char, const N: u8> Pin<MODE, HL, P, N> {
     #[inline(always)]
     fn _set_high(&mut self) {
         // NOTE(unsafe) atomic write to a stateless register
-        unsafe { (*Gpio::<P>::ptr()).bsrr().write(|w| w.bits(1 << N)) }
+        unsafe {
+            (*Gpio::<P>::ptr()).bsrr().write(|w| w.bits(1 << N));
+        }
     }
     #[inline(always)]
     fn _set_low(&mut self) {
         // NOTE(unsafe) atomic write to a stateless register
-        unsafe { (*Gpio::<P>::ptr()).bsrr().write(|w| w.bits(1 << (16 + N))) }
+        unsafe {
+            (*Gpio::<P>::ptr()).bsrr().write(|w| w.bits(1 << (16 + N)));
+        }
     }
 
     #[inline(always)]

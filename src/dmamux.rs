@@ -596,7 +596,7 @@ macro_rules! dmamux {
                     #[inline(always)]
                     fn set_request_line(&mut self, request_line: DmaInput) -> Result<(), Error> {
                         let csel_val: $DMAX_CY_SEL = request_line.try_into()?;
-                        self.cselr().modify(|_, w| w.$cYs().bits(csel_val.into()));
+                        self.cselr().modify(|_, w| unsafe { w.$cYs().bits(csel_val.into()) });
 
                         Ok(())
                     }

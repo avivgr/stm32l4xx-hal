@@ -230,7 +230,7 @@ where
         // Make sure the I2C unit is disabled so we can configure it
         i2c.cr1().modify(|_, w| w.pe().clear_bit());
         // Configure for "fast mode" (400 KHz)
-        i2c.timingr().write(|w| {
+        i2c.timingr().write(|w| unsafe {
             w.presc()
                 .bits(config.presc)
                 .scll()
@@ -261,7 +261,7 @@ macro_rules! flush_txdr {
     ($i2c:expr) => {
         // If a pending TXIS flag is set, write dummy data to TXDR
         if $i2c.isr().read().txis().bit_is_set() {
-            $i2c.txdr().write(|w| w.txdata().bits(0));
+            $i2c.txdr().write(|w| unsafe { w.txdata().bits(0) });
         }
 
         // If TXDR is not flagged as empty, write 1 to flush it
@@ -279,13 +279,14 @@ macro_rules! busy_wait {
             if isr.$flag().$variant() {
                 break;
             } else if isr.berr().is_error() {
-                $i2c.icr().write(|w| w.berrcf().set_bit());
+                $i2c.icr().write(|w| w.berrcf().clear_bit_by_one());
                 return Err(Error::Bus);
             } else if isr.arlo().is_lost() {
-                $i2c.icr().write(|w| w.arlocf().set_bit());
+                $i2c.icr().write(|w| w.arlocf().clear_bit_by_one());
                 return Err(Error::Arbitration);
             } else if isr.nackf().bit_is_set() {
-                $i2c.icr().write(|w| w.stopcf().set_bit().nackcf().set_bit());
+                $i2c.icr()
+                    .write(|w| w.stopcf().clear_bit_by_one().nackcf().clear_bit_by_one());
                 flush_txdr!($i2c);
                 return Err(Error::Nack);
             } else {
@@ -313,7 +314,7 @@ where
         // Set START and prepare to send `bytes`. The
         // START bit can be set even if the bus is BUSY or
         // I2C is in slave mode.
-        self.i2c.cr2().write(|w| {
+        self.i2c.cr2().write(|w| unsafe {
             w.start()
                 .set_bit()
                 .sadd()
@@ -335,7 +336,7 @@ where
             busy_wait!(self.i2c, txis, is_empty);
 
             // Put byte on the wire
-            self.i2c.txdr().write(|w| w.txdata().bits(*byte));
+            self.i2c.txdr().write(|w| unsafe { w.txdata().bits(*byte) });
         }
 
         // Wait until the write finishes
@@ -367,7 +368,7 @@ where
         // Set START and prepare to receive bytes into
         // `buffer`. The START bit can be set even if the bus
         // is BUSY or I2C is in slave mode.
-        self.i2c.cr2().write(|w| {
+        self.i2c.cr2().write(|w| unsafe {
             w.sadd()
                 .bits((addr << 1 | 0) as u16)
                 .rd_wrn()
@@ -413,7 +414,7 @@ where
         // Set START and prepare to send `bytes`. The
         // START bit can be set even if the bus is BUSY or
         // I2C is in slave mode.
-        self.i2c.cr2().write(|w| {
+        self.i2c.cr2().write(|w| unsafe {
             w.start()
                 .set_bit()
                 .sadd()
@@ -434,14 +435,14 @@ where
             busy_wait!(self.i2c, txis, is_empty);
 
             // Put byte on the wire
-            self.i2c.txdr().write(|w| w.txdata().bits(*byte));
+            self.i2c.txdr().write(|w| unsafe { w.txdata().bits(*byte) });
         }
 
         // Wait until the write finishes before beginning to read.
         busy_wait!(self.i2c, tc, is_complete);
 
         // reSTART and prepare to receive bytes into `buffer`
-        self.i2c.cr2().write(|w| {
+        self.i2c.cr2().write(|w| unsafe {
             w.sadd()
                 .bits(u16(addr << 1 | 1))
                 .add10()

@@ -181,19 +181,19 @@ macro_rules! advanced_timer {
                 <$TIMX>::reset(apb);
 
                 if PINS::C1 {
-                    tim.ccmr1_output().modify(|_, w| w.oc1pe().set_bit().oc1m().bits(6));
+                    tim.ccmr1_output().modify(|_, w| unsafe { w.oc1pe().set_bit().oc1m().bits(6) });
                 }
 
                 if PINS::C2 {
-                    tim.ccmr1_output().modify(|_, w| w.oc2pe().set_bit().oc2m().bits(6));
+                    tim.ccmr1_output().modify(|_, w| unsafe { w.oc2pe().set_bit().oc2m().bits(6) });
                 }
 
                 if PINS::C3 {
-                    tim.ccmr2_output().modify(|_, w| w.oc3pe().set_bit().oc3m().bits(6));
+                    tim.ccmr2_output().modify(|_, w| unsafe { w.oc3pe().set_bit().oc3m().bits(6) });
                 }
 
                 if PINS::C4 {
-                    tim.ccmr2_output().modify(|_, w| w.oc4pe().set_bit().oc4m().bits(6));
+                    tim.ccmr2_output().modify(|_, w| unsafe { w.oc4pe().set_bit().oc4m().bits(6) });
                 }
 
                 let clk = clocks.pclk2();
@@ -201,17 +201,16 @@ macro_rules! advanced_timer {
 
                 // maybe this is all u32? also, why no `- 1` vs `timer.rs`?
                 let psc = ticks / (1 << 16);
-                tim.psc().write(|w| { w.psc().bits(psc as $psc_width) });
+                tim.psc().write(|w| unsafe { w.psc().bits(psc as $psc_width) });
                 let arr = ticks / (psc + 1);
-                tim.arr().write(|w| { w.arr().bits(arr as $arr_width) });
+                tim.arr().write(|w| unsafe { w.arr().bits(arr as $arr_width) });
 
                 // Only for the advanced control timer
                 tim.bdtr().write(|w| w.moe().set_bit());
                 tim.egr().write(|w| w.ug().set_bit());
 
                 tim.cr1().write(|w| {
-                    w.cms()
-                        .bits(0b00)
+                    unsafe { w.cms().bits(0b00) }
                         .dir().clear_bit()
                         .opm().clear_bit()
                         .cen().set_bit()
@@ -222,10 +221,10 @@ macro_rules! advanced_timer {
             }
 
             pwm_channels! {
-                $TIMX:  (C1, $arr_width, cc1e, ccr1(), ccr),
-                        (C2, $arr_width, cc2e, ccr2(), ccr),
-                        (C3, $arr_width, cc3e, ccr3(), ccr),
-                        (C4, $arr_width, cc4e, ccr4(), ccr),
+                $TIMX:  (C1, $arr_width, cc1e, ccr1, ccr),
+                        (C2, $arr_width, cc2e, ccr2, ccr),
+                        (C3, $arr_width, cc3e, ccr3, ccr),
+                        (C4, $arr_width, cc4e, ccr4, ccr),
             }
 
         )+
@@ -249,19 +248,19 @@ macro_rules! standard_timer {
                 <$TIMX>::reset(apb);
 
                 if PINS::C1 {
-                    tim.ccmr1_output().modify(|_, w| w.oc1pe().set_bit().oc1m().bits(6));
+                    tim.ccmr1_output().modify(|_, w| unsafe { w.oc1pe().set_bit().oc1m().bits(6) });
                 }
 
                 if PINS::C2 {
-                    tim.ccmr1_output().modify(|_, w| w.oc2pe().set_bit().oc2m().bits(6));
+                    tim.ccmr1_output().modify(|_, w| unsafe { w.oc2pe().set_bit().oc2m().bits(6) });
                 }
 
                 if PINS::C3 {
-                    tim.ccmr2_output().modify(|_, w| w.oc3pe().set_bit().oc3m().bits(6));
+                    tim.ccmr2_output().modify(|_, w| unsafe { w.oc3pe().set_bit().oc3m().bits(6) });
                 }
 
                 if PINS::C4 {
-                    tim.ccmr2_output().modify(|_, w| w.oc4pe().set_bit().oc4m().bits(6));
+                    tim.ccmr2_output().modify(|_, w| unsafe { w.oc4pe().set_bit().oc4m().bits(6) });
                 }
 
                 let clk = clocks.pclk1();
@@ -269,13 +268,12 @@ macro_rules! standard_timer {
 
                 // maybe this is all u32? also, why no `- 1` vs `timer.rs`?
                 let psc = ticks / (1 << 16);
-                tim.psc().write(|w| { w.psc().bits(psc as $psc_width) });
+                tim.psc().write(|w| unsafe { w.psc().bits(psc as $psc_width) });
                 let arr = ticks / (psc + 1);
-                tim.arr().write(|w| { w.arr().bits(arr as $arr_width) });
+                tim.arr().write(|w| unsafe { w.arr().bits(arr as $arr_width) });
 
                 tim.cr1().write(|w| {
-                    w.cms()
-                        .bits(0b00)
+                    unsafe { w.cms().bits(0b00) }
                         .dir().clear_bit()
                         .opm().clear_bit()
                         .cen().set_bit()
@@ -286,10 +284,10 @@ macro_rules! standard_timer {
             }
 
             pwm_channels! {
-                $TIMX:  (C1, $arr_width, cc1e, ccr1(), ccr),
-                        (C2, $arr_width, cc2e, ccr2(), ccr),
-                        (C3, $arr_width, cc3e, ccr3(), ccr),
-                        (C4, $arr_width, cc4e, ccr4(), ccr),
+                $TIMX:  (C1, $arr_width, cc1e, ccr1, ccr),
+                        (C2, $arr_width, cc2e, ccr2, ccr),
+                        (C3, $arr_width, cc3e, ccr3, ccr),
+                        (C4, $arr_width, cc4e, ccr4, ccr),
             }
 
         )+
@@ -313,7 +311,7 @@ macro_rules! small_timer {
                 <$TIMX>::reset(apb);
 
                 if PINS::C1 {
-                    tim.ccmr1_output().modify(|_, w| w.oc1pe().set_bit().oc1m().bits(6));
+                    tim.ccmr1_output().modify(|_, w| unsafe { w.oc1pe().set_bit().oc1m().bits(6) });
                 }
 
                 // TODO: The uncommented lines are awaiting PAC updates to be valid.
@@ -326,7 +324,7 @@ macro_rules! small_timer {
 
                 // maybe this is all u32? also, why no `- 1` vs `timer.rs`?
                 let psc = ticks / (1 << 16);
-                tim.psc().write(|w| { w.psc().bits(psc as $psc_width) });
+                tim.psc().write(|w| unsafe { w.psc().bits(psc as $psc_width) });
                 let arr = ticks / (psc + 1);
                 unsafe { tim.arr().write(|w| { w.arr().bits(arr as $arr_width) }); }
 
@@ -343,7 +341,7 @@ macro_rules! small_timer {
             }
 
             pwm_channels! {
-                $TIMX:  (C1, $arr_width, cc1e, ccr1(), ccr),
+                $TIMX:  (C1, $arr_width, cc1e, ccr1, ccr),
                 // TODO: The uncommented line is awaiting PAC updates to be valid.
                 //        (C2, $arr_width, cc2e, ccr2, ccr2),
             }
@@ -360,17 +358,17 @@ macro_rules! pwm_channels {
 
                 #[inline(always)]
                 fn disable(&mut self) {
-                    unsafe { (*$TIMX::ptr()).ccer().modify(|_, w| w.$ccXe().clear_bit()) }
+                    unsafe { (*$TIMX::ptr()).ccer().modify(|_, w| w.$ccXe().clear_bit()); }
                 }
 
                 #[inline(always)]
                 fn enable(&mut self) {
-                    unsafe { (*$TIMX::ptr()).ccer().modify(|_, w| w.$ccXe().set_bit()) }
+                    unsafe { (*$TIMX::ptr()).ccer().modify(|_, w| w.$ccXe().set_bit()); }
                 }
 
                 #[inline(always)]
                 fn get_duty(&self) -> Self::Duty {
-                    unsafe { (*$TIMX::ptr()).$ccrX.read().$ccr().bits() }
+                    unsafe { (*$TIMX::ptr()).$ccrX().read().$ccr().bits() }
                 }
 
                 #[inline(always)]
@@ -380,7 +378,7 @@ macro_rules! pwm_channels {
 
                 #[inline(always)]
                 fn set_duty(&mut self, duty: Self::Duty) {
-                    unsafe { (*$TIMX::ptr()).$ccrX.write(|w| w.$ccr().bits(duty)) }
+                    unsafe { (*$TIMX::ptr()).$ccrX().write(|w| w.$ccr().bits(duty)); }
                 }
             }
         )+

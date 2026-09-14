@@ -713,7 +713,7 @@ impl CFGR {
                 } else {
                     0b100
                 })
-            })
+            });
         }
 
         let sysclk_src_bits;
@@ -798,7 +798,7 @@ impl CFGR {
         // MSI always starts on reset
         if msi.is_none() {
             rcc.cr()
-                .modify(|_, w| w.msion().clear_bit().msipllen().clear_bit())
+                .modify(|_, w| w.msion().clear_bit().msipllen().clear_bit());
         }
 
         //

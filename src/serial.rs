@@ -289,7 +289,7 @@ macro_rules! hal {
                     }
 
                     if let Some(val) = config.receiver_timeout {
-                        usart.rtor().modify(|_, w| w.rto().bits(val));
+                        usart.rtor().modify(|_, w| unsafe { w.rto().bits(val) });
                     }
 
                     // enable DMA transfers
@@ -302,7 +302,7 @@ macro_rules! hal {
                         usart.cr3().modify(|_, w| w.dem().set_bit());
 
                         // Pre/post driver enable set conservative to the max time
-                        usart.cr1().modify(|_, w| w.deat().bits(0b1111).dedt().bits(0b1111));
+                        usart.cr1().modify(|_, w| unsafe { w.deat().bits(0b1111).dedt().bits(0b1111) });
                     } else {
                         usart.cr3().modify(|_, w| w.rtse().clear_bit().ctse().clear_bit());
                     }
@@ -350,11 +350,11 @@ macro_rules! hal {
                         StopBits::STOP1P5 => 0b11,
                     };
                     usart.cr2().modify(|_r, w| {
-                        w.stop().bits(stop_bits);
+                        unsafe { w.stop().bits(stop_bits); }
 
                         // Setup character match (if requested)
                         if let Some(c) = config.character_match {
-                            w.add().bits(c);
+                            unsafe { w.add().bits(c); }
                         }
 
                         if config.receiver_timeout.is_some() {
@@ -379,19 +379,19 @@ macro_rules! hal {
                 pub fn listen(&mut self, event: Event) {
                     match event {
                         Event::Rxne => {
-                            self.usart.cr1().modify(|_, w| w.rxneie().set_bit())
+                            self.usart.cr1().modify(|_, w| w.rxneie().set_bit());
                         },
                         Event::Txe => {
-                            self.usart.cr1().modify(|_, w| w.txeie().set_bit())
+                            self.usart.cr1().modify(|_, w| w.txeie().set_bit());
                         },
                         Event::Idle => {
-                            self.usart.cr1().modify(|_, w| w.idleie().set_bit())
+                            self.usart.cr1().modify(|_, w| w.idleie().set_bit());
                         },
                         Event::CharacterMatch => {
-                            self.usart.cr1().modify(|_, w| w.cmie().set_bit())
+                            self.usart.cr1().modify(|_, w| w.cmie().set_bit());
                         },
                         Event::ReceiverTimeout => {
-                            self.usart.cr1().modify(|_, w| w.rtoie().set_bit())
+                            self.usart.cr1().modify(|_, w| w.rtoie().set_bit());
                         },
                     }
                 }
@@ -410,19 +410,19 @@ macro_rules! hal {
                 pub fn unlisten(&mut self, event: Event) {
                     match event {
                         Event::Rxne => {
-                            self.usart.cr1().modify(|_, w| w.rxneie().clear_bit())
+                            self.usart.cr1().modify(|_, w| w.rxneie().clear_bit());
                         },
                         Event::Txe => {
-                            self.usart.cr1().modify(|_, w| w.txeie().clear_bit())
+                            self.usart.cr1().modify(|_, w| w.txeie().clear_bit());
                         },
                         Event::Idle => {
-                            self.usart.cr1().modify(|_, w| w.idleie().clear_bit())
+                            self.usart.cr1().modify(|_, w| w.idleie().clear_bit());
                         },
                         Event::CharacterMatch => {
-                            self.usart.cr1().modify(|_, w| w.cmie().clear_bit())
+                            self.usart.cr1().modify(|_, w| w.cmie().clear_bit());
                         },
                         Event::ReceiverTimeout => {
-                            self.usart.cr1().modify(|_, w| w.rtoie().clear_bit())
+                            self.usart.cr1().modify(|_, w| w.rtoie().clear_bit());
                         },
                     }
                 }
@@ -611,7 +611,7 @@ macro_rules! hal {
 
                     if isr.idle().bit_is_set() {
                         if clear {
-                            icr.write(|w| w.idlecf().set_bit() );
+                            icr.write(|w| w.idlecf().clear_bit_by_one());
                         }
                         true
                     } else {
@@ -628,7 +628,7 @@ macro_rules! hal {
 
                     if isr.rtof().bit_is_set() {
                         if clear {
-                            icr.write(|w| w.rtocf().set_bit() );
+                            icr.write(|w| w.rtocf().clear_bit_by_one());
                         }
                         true
                     } else {
@@ -644,7 +644,7 @@ macro_rules! hal {
 
                     if isr.cmf().bit_is_set() {
                         if clear {
-                            icr.write(|w| w.cmcf().set_bit() );
+                            icr.write(|w| w.cmcf().clear_bit_by_one());
                         }
                         true
                     } else {
