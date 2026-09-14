@@ -115,26 +115,65 @@ Realistic estimate:
 - The mechanical classes: about an hour.
 - Per-device and per-example fixing: open-ended.
 
-## Benefits beyond community service
+## Is 0.16 worth anything beyond community service?
 
-Verified against the 0.16 sources, these matter for downstream projects
-independently of whether upstream ever merges anything:
+Yes. These are verified against the 0.16 sources and matter to a downstream
+project regardless of whether upstream ever merges anything.
 
-1. **Typed, per-device trigger enums.** `adc1::cfgr::EXTSEL` is now a generated
-   enum (`Tim1Cc1`, `Tim6Trgo`, `Tim15Trgo`, ...) derived from each device's own
-   SVD. In 0.14 it is a bare `u8` field. This directly replaces a hand-written
-   `ExternalTrigger` enum carrying raw encodings, removes the `unsafe { bits() }`
-   around it, and structurally eliminates the risk of applying one device's
-   trigger map to another ADC instance.
-2. **Write-1-to-clear is type-enforced** via `Bit1C`, catching a whole class of
-   status-flag bugs at compile time.
-3. **No pointer casts needed** for byte-wide data-register access: `dr8()`/`dr16()`
-   replace `&reg as *const _ as *mut u8` outright.
-4. **`critical-section` is a default feature**, which is the modern interop story
-   for RTIC 2 and embassy.
-5. **`defmt` and `atomics` features** are available for register types.
-6. **Four years of stm32-rs SVD corrections**, meaning more typed fields and
-   fewer raw-bits escapes in downstream code generally.
+### The one that is squarely in our path: typed `EXTSEL`
+
+In 0.14, `ADC_CFGR.EXTSEL` is a bare `u8` field. In 0.16 it is a generated enum:
+
+```rust
+pub enum EXTSEL {
+    Tim1Cc1 = 0, Tim1Cc2 = 1, Tim1Cc3 = 2, Tim2Cc2 = 3,
+    Tim3Trgo = 4, Exti11 = 6, Tim1Trgo = 9, Tim1Trgo2 = 10,
+    Tim2Trgo = 11, Tim6Trgo = 13, Tim15Trgo = 14, Tim3Cc4 = 15,
+}
+```
+
+Critically, this is generated from **each device's own SVD**, so the variants a
+given device offers are the only ones that typecheck for it.
+
+For the local ADC work that means:
+
+- It replaces the hand-written `ExternalTrigger` enum carrying raw encodings.
+- It removes the `unsafe { bits() }` wrapped around those encodings.
+- It structurally eliminates `REVIEW.md` finding #2, the ADC3 trigger-map
+  mismatch. That was worked around by restricting the trigger methods to ADC1
+  and ADC2; with 0.16 the PAC simply does not offer the wrong device's map, so
+  the restriction stops being load-bearing. The patch gets smaller and safer.
+
+### The rest, in rough order of relevance
+
+1. **Write-1-to-clear is type-enforced** via `Bit1C` and `clear_bit_by_one()`.
+   Status-flag clearing, including in the comparator EXTI code, gets a
+   compile-time check it does not have on 0.14.
+2. **No pointer casts at all** for byte-wide data-register access. `dr8()` and
+   `dr16()` mean the `.as_ptr() as *mut u8` workaround disappears rather than
+   being reworded.
+3. **`critical-section` is a default feature.** This is exactly what made every
+   example fail to link during the local CI matrix run
+   (`undefined symbol: _critical_section_1_0_acquire`), and it is the RTIC 2 and
+   embassy interop story.
+4. **`defmt` feature** on register types, for registers in defmt logs.
+5. **`atomics` feature** (portable-atomic) for atomic register access helpers.
+6. **Four years of stm32-rs SVD corrections**, meaning more typed fields
+   generally and fewer raw-bits escapes in downstream code.
+
+### Verdict: not now
+
+The only hard blocker was that the crate did not build on modern rustc, and the
+local `.as_ptr()` fix already clears that. Everything above is quality of life.
+
+The price is the DMA cluster rewrite plus an open-ended per-device and
+per-example tail, and it lands on `dma.rs` -- precisely the module the
+hardware-tested ADC/DMA work sits on. That trades a verified foundation for an
+enum that can be hand-written in twenty lines.
+
+Reconsider if the 0.14 SVD turns out to describe something incorrectly, or if
+the comparator work moves to a device whose registers 0.14 describes badly.
+This branch keeps the analysis attached, so picking it up later costs nothing.
 
 ## Status of this branch
 
