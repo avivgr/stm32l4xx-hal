@@ -222,7 +222,7 @@ bus! {
 #[cfg(any(
     feature = "stm32l475",
     feature = "stm32l476",
-    feature = "stm32l485",
+    // feature = "stm32l485",
     feature = "stm32l486",
     feature = "stm32l496",
     feature = "stm32l4a6",

@@ -6,15 +6,15 @@ use core::convert::TryInto;
 #[cfg(not(any(
     feature = "stm32l412",
     feature = "stm32l422",
-    feature = "stm32l4p5",
-    feature = "stm32l4q5"
+    // feature = "stm32l4p5",
+    // feature = "stm32l4q5"
 )))]
 pub mod rtc2;
 #[cfg(not(any(
     feature = "stm32l412",
     feature = "stm32l422",
-    feature = "stm32l4p5",
-    feature = "stm32l4q5"
+    // feature = "stm32l4p5",
+    // feature = "stm32l4q5"
 )))]
 pub use rtc2 as rtc_registers;
 
@@ -22,15 +22,15 @@ pub use rtc2 as rtc_registers;
 #[cfg(any(
     feature = "stm32l412",
     feature = "stm32l422",
-    feature = "stm32l4p5",
-    feature = "stm32l4q5"
+    // feature = "stm32l4p5",
+    // feature = "stm32l4q5"
 ))]
 pub mod rtc3;
 #[cfg(any(
     feature = "stm32l412",
     feature = "stm32l422",
-    feature = "stm32l4p5",
-    feature = "stm32l4q5"
+    // feature = "stm32l4p5",
+    // feature = "stm32l4q5"
 ))]
 pub use rtc3 as rtc_registers;
 

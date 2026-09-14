@@ -727,7 +727,7 @@ gpio!(GPIOE, gpioe, PEx, 'E', 4, [
     // feature = "stm32l471",  // missing PAC support for Port G
     feature = "stm32l475",
     feature = "stm32l476",
-    feature = "stm32l485",
+    // feature = "stm32l485",
     feature = "stm32l486",
     feature = "stm32l496",
     feature = "stm32l4a6",
@@ -762,7 +762,7 @@ gpio!(GPIOF, gpiof, PFx, 'F', 5, [
     // feature = "stm32l471",  // missing PAC support for Port G
     feature = "stm32l475",
     feature = "stm32l476",
-    feature = "stm32l485",
+    // feature = "stm32l485",
     feature = "stm32l486",
     feature = "stm32l496",
     feature = "stm32l4a6",
@@ -800,7 +800,7 @@ gpio!(GPIOG, gpiog, PGx, 'G', 6,
   // feature = "stm32l471",  // missing PAC support for Port H
   feature = "stm32l475",
   feature = "stm32l476",
-  feature = "stm32l485",
+  // feature = "stm32l485",
   feature = "stm32l486",
   feature = "stm32l496",
   feature = "stm32l4a6",
@@ -847,7 +847,7 @@ impl<const P: char> Gpio<P> {
                 // feature = "stm32l471",  // missing PAC support for Port F
                 feature = "stm32l475",
                 feature = "stm32l476",
-                feature = "stm32l485",
+                // feature = "stm32l485",
                 feature = "stm32l486",
                 feature = "stm32l496",
                 feature = "stm32l4a6",
@@ -865,7 +865,7 @@ impl<const P: char> Gpio<P> {
                 // feature = "stm32l471",  // missing PAC support for Port G
                 feature = "stm32l475",
                 feature = "stm32l476",
-                feature = "stm32l485",
+                // feature = "stm32l485",
                 feature = "stm32l486",
                 feature = "stm32l496",
                 feature = "stm32l4a6",
@@ -883,7 +883,7 @@ impl<const P: char> Gpio<P> {
               // feature = "stm32l471",  // missing PAC support for Port G
               feature = "stm32l475",
               feature = "stm32l476",
-              feature = "stm32l485",
+              // feature = "stm32l485",
               feature = "stm32l486",
               feature = "stm32l496",
               feature = "stm32l4a6",
