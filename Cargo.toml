@@ -21,7 +21,7 @@ exclude = [
 edition = "2018"
 
 [dependencies]
-cortex-m = "0.7"
+cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
 nb = "0.1.1"
 stm32l4 = "0.16.0"
 embedded-dma = "0.1"
