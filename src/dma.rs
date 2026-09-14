@@ -503,23 +503,7 @@ macro_rules! rx_tx_channel_mapping {
 
 macro_rules! dma {
     ($($DMAX:ident: ($dmaX:ident, {
-        $($CX:ident: (
-            $ccrX:ident,
-            $CCRX:ident,
-            $cndtrX:ident,
-            $CNDTRX:ident,
-            $cparX:ident,
-            $CPARX:ident,
-            $cmarX:ident,
-            $CMARX:ident,
-            $htifX:ident,
-            $tcifX:ident,
-            $chtifX:ident,
-            $ctcifX:ident,
-            $cgifX:ident,
-            $teifX:ident,
-            $cteifX:ident
-        ),)+
+        $($CX:ident: $idx:expr,)+
     }),)+) => {
         $(
             pub mod $dmaX {
@@ -569,7 +553,7 @@ macro_rules! dma {
                         /// The amount of transfers that makes up one transaction
                         #[inline]
                         pub fn set_transfer_length(&mut self, len: u16) {
-                            self.cndtr().write(|w| w.ndt().bits(len));
+                            self.cndtr().write(|w| unsafe { w.ndt().bits(len) });
                         }
 
                         /// Starts the DMA transfer
@@ -581,14 +565,14 @@ macro_rules! dma {
                         /// Stops the DMA transfer
                         #[inline]
                         pub fn stop(&mut self) {
-                            self.ifcr().write(|w| w.$cgifX().set_bit());
+                            self.ifcr().write(|w| w.cgif($idx as u8).set_bit());
                             self.ccr().modify(|_, w| w.en().clear_bit() );
                         }
 
                         /// Returns `true` if there's a transfer in progress
                         #[inline]
                         pub fn in_progress(&self) -> bool {
-                            self.isr().$tcifX().bit_is_clear()
+                            self.isr().tcif($idx as u8).bit_is_clear()
                         }
 
                         #[inline]
@@ -598,7 +582,7 @@ macro_rules! dma {
                                 Event::TransferComplete => {
                                     self.ccr().modify(|_, w| w.tcie().set_bit())
                                 }
-                            }
+                            };
                         }
 
                         #[inline]
@@ -610,7 +594,7 @@ macro_rules! dma {
                                 Event::TransferComplete => {
                                     self.ccr().modify(|_, w| w.tcie().clear_bit())
                                 }
-                            }
+                            };
                         }
 
                         /// Check and clear the interrupt for the given event.
@@ -629,9 +613,9 @@ macro_rules! dma {
                         /// Check and clear the half-transfer interrupt.
                         #[inline]
                         pub fn check_half_transfer_interrupt(&mut self) -> bool {
-                            if self.isr().$htifX().bit_is_set() {
+                            if self.isr().htif($idx as u8).bit_is_set() {
                                 self.clear_half_transfer_interrupt();
-                                return true
+                                return true;
                             }
 
                             false
@@ -640,15 +624,15 @@ macro_rules! dma {
                         /// Clear the half-transfer interrupt.
                         #[inline]
                         pub fn clear_half_transfer_interrupt(&mut self) {
-                            self.ifcr().write(|w| w.$chtifX().set_bit())
+                            self.ifcr().write(|w| w.chtif($idx as u8).set_bit());
                         }
 
                         /// Check and clear the transfer complete interrupt.
                         #[inline]
                         pub fn check_transfer_complete_interrupt(&mut self) -> bool {
-                            if self.isr().$tcifX().bit_is_set() {
+                            if self.isr().tcif($idx as u8).bit_is_set() {
                                 self.clear_transfer_complete_interrupt();
-                                return true
+                                return true;
                             }
 
                             false
@@ -657,7 +641,7 @@ macro_rules! dma {
                         /// Clear the transfer complete interrupt.
                         #[inline]
                         pub fn clear_transfer_complete_interrupt(&mut self) {
-                            self.ifcr().write(|w| w.$ctcifX().set_bit())
+                            self.ifcr().write(|w| w.ctcif($idx as u8).set_bit());
                         }
 
                         #[inline]
@@ -672,23 +656,28 @@ macro_rules! dma {
                         }
 
                         #[inline]
-                        pub(crate) fn ccr(&mut self) -> &dma1::$CCRX {
-                            unsafe { &(*$DMAX::ptr()).$ccrX }
+                        pub(crate) fn ch(&self) -> &dma1::CH {
+                            unsafe { (*$DMAX::ptr()).ch($idx as usize) }
                         }
 
                         #[inline]
-                        pub(crate) fn cndtr(&mut self) -> &dma1::$CNDTRX {
-                            unsafe { &(*$DMAX::ptr()).$cndtrX }
+                        pub(crate) fn ccr(&mut self) -> &dma1::ch::CR {
+                            self.ch().cr()
                         }
 
                         #[inline]
-                        pub(crate) fn cpar(&mut self) -> &dma1::$CPARX {
-                            unsafe { &(*$DMAX::ptr()).$cparX }
+                        pub(crate) fn cndtr(&mut self) -> &dma1::ch::NDTR {
+                            self.ch().ndtr()
                         }
 
                         #[inline]
-                        pub(crate) fn cmar(&mut self) -> &dma1::$CMARX {
-                            unsafe { &(*$DMAX::ptr()).$cmarX }
+                        pub(crate) fn cpar(&mut self) -> &dma1::ch::PAR {
+                            self.ch().par()
+                        }
+
+                        #[inline]
+                        pub(crate) fn cmar(&mut self) -> &dma1::ch::MAR {
+                            self.ch().mar()
                         }
 
                         #[cfg(not(any(
@@ -709,7 +698,7 @@ macro_rules! dma {
                         #[inline]
                         pub(crate) fn get_cndtr(&self) -> u32 {
                             // NOTE(unsafe) atomic read with no side effects
-                            unsafe { (*$DMAX::ptr()).$cndtrX.read().bits() }
+                            self.ch().ndtr().read().bits()
                         }
 
                     }
@@ -766,8 +755,8 @@ macro_rules! dma {
 
                             // If there has been an error, clear the error flag to let the next
                             // transaction start
-                            if self.payload.channel.isr().$teifX().bit_is_set() {
-                                self.payload.channel.ifcr().write(|w| w.$cteifX().set_bit());
+                            if self.payload.channel.isr().teif($idx as u8).bit_is_set() {
+                                self.payload.channel.ifcr().write(|w| w.cteif($idx as u8).set_bit());
                             }
 
                             // NOTE(compiler_fence) operations on `buffer` should not be reordered after
@@ -826,7 +815,7 @@ macro_rules! dma {
 
                             // Clear ISR flag (Transfer Complete)
                             if !self.payload.channel.in_progress() {
-                                self.payload.channel.ifcr().write(|w| w.$ctcifX().set_bit());
+                                self.payload.channel.ifcr().write(|w| w.ctcif($idx as u8).set_bit());
                             } else if character_match_interrupt {
                                 // 1. If DMA not done and there was a character match interrupt,
                                 // let the DMA flush a little and then halt transfer.
@@ -1137,7 +1126,7 @@ macro_rules! dma {
 
                         // reset the DMA control registers (stops all on-going transfers)
                         $(
-                            self.$ccrX.reset();
+                            self.ch($idx as usize).cr().reset();
                         )+
 
                         Channels((), $($CX { }),+)
@@ -1150,134 +1139,22 @@ macro_rules! dma {
 
 dma! {
     DMA1: (dma1, {
-        C1: (
-            ccr1, CCR1,
-            cndtr1, CNDTR1,
-            cpar1, CPAR1,
-            cmar1, CMAR1,
-            htif1, tcif1,
-            chtif1, ctcif1, cgif1,
-            teif1, cteif1
-        ),
-        C2: (
-            ccr2, CCR2,
-            cndtr2, CNDTR2,
-            cpar2, CPAR2,
-            cmar2, CMAR2,
-            htif2, tcif2,
-            chtif2, ctcif2, cgif2,
-            teif2, cteif2
-        ),
-        C3: (
-            ccr3, CCR3,
-            cndtr3, CNDTR3,
-            cpar3, CPAR3,
-            cmar3, CMAR3,
-            htif3, tcif3,
-            chtif3, ctcif3, cgif3,
-            teif3, cteif3
-        ),
-        C4: (
-            ccr4, CCR4,
-            cndtr4, CNDTR4,
-            cpar4, CPAR4,
-            cmar4, CMAR4,
-            htif4, tcif4,
-            chtif4, ctcif4, cgif4,
-            teif4, cteif4
-        ),
-        C5: (
-            ccr5, CCR5,
-            cndtr5, CNDTR5,
-            cpar5, CPAR5,
-            cmar5, CMAR5,
-            htif5, tcif5,
-            chtif5, ctcif5, cgif5,
-            teif5, cteif5
-        ),
-        C6: (
-            ccr6, CCR6,
-            cndtr6, CNDTR6,
-            cpar6, CPAR6,
-            cmar6, CMAR6,
-            htif6, tcif6,
-            chtif6, ctcif6, cgif6,
-            teif6, cteif6
-        ),
-        C7: (
-            ccr7, CCR7,
-            cndtr7, CNDTR7,
-            cpar7, CPAR7,
-            cmar7, CMAR7,
-            htif7, tcif7,
-            chtif7, ctcif7, cgif7,
-            teif7, cteif7
-        ),
+        C1: 0,
+        C2: 1,
+        C3: 2,
+        C4: 3,
+        C5: 4,
+        C6: 5,
+        C7: 6,
     }),
     DMA2: (dma2, {
-        C1: (
-            ccr1, CCR1,
-            cndtr1, CNDTR1,
-            cpar1, CPAR1,
-            cmar1, CMAR1,
-            htif1, tcif1,
-            chtif1, ctcif1, cgif1,
-            teif1, cteif1
-        ),
-        C2: (
-            ccr2, CCR2,
-            cndtr2, CNDTR2,
-            cpar2, CPAR2,
-            cmar2, CMAR2,
-            htif2, tcif2,
-            chtif2, ctcif2, cgif2,
-            teif2, cteif2
-        ),
-        C3: (
-            ccr3, CCR3,
-            cndtr3, CNDTR3,
-            cpar3, CPAR3,
-            cmar3, CMAR3,
-            htif3, tcif3,
-            chtif3, ctcif3, cgif3,
-            teif3, cteif3
-        ),
-        C4: (
-            ccr4, CCR4,
-            cndtr4, CNDTR4,
-            cpar4, CPAR4,
-            cmar4, CMAR4,
-            htif4, tcif4,
-            chtif4, ctcif4, cgif4,
-            teif4, cteif4
-        ),
-        C5: (
-            ccr5, CCR5,
-            cndtr5, CNDTR5,
-            cpar5, CPAR5,
-            cmar5, CMAR5,
-            htif5, tcif5,
-            chtif5, ctcif5, cgif5,
-            teif5, cteif5
-        ),
-        C6: (
-            ccr6, CCR6,
-            cndtr6, CNDTR6,
-            cpar6, CPAR6,
-            cmar6, CMAR6,
-            htif6, tcif6,
-            chtif6, ctcif6, cgif6,
-            teif6, cteif6
-        ),
-        C7: (
-            ccr7, CCR7,
-            cndtr7, CNDTR7,
-            cpar7, CPAR7,
-            cmar7, CMAR7,
-            htif7, tcif7,
-            chtif7, ctcif7, cgif7,
-            teif7, cteif7
-        ),
+        C1: 0,
+        C2: 1,
+        C3: 2,
+        C4: 3,
+        C5: 4,
+        C6: 5,
+        C7: 6,
     }),
 }
 

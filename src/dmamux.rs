@@ -558,7 +558,7 @@ pub trait DmaMux {
 }
 
 macro_rules! dmamux {
-    ($($dmaX:ident: { $( $CY:ident: ($cYcr:ident, $cYs:ident, $DMAX_CY_SEL:ident), )+ },)+) => {
+    ($($dmaX:ident: { $( $CY:ident: ($mux_idx:expr, $cYs:ident, $DMAX_CY_SEL:ident), )+ },)+) => {
         $(
             $(
                 impl DmaMux for $dmaX::$CY {
@@ -577,7 +577,7 @@ macro_rules! dmamux {
                         let dmareq_id_a: DMAREQ_ID_A = request_line.try_into()?;
                         let mux = unsafe { &(*DMAMUX::ptr()) };
                         unsafe {
-                            mux.$cYcr.modify(|_, w| w.dmareq_id().bits(dmareq_id_a.into()));
+                            mux.ccr($mux_idx as usize).modify(|_, w| w.dmareq_id().bits(dmareq_id_a.into()));
                         }
 
                         Ok(())
@@ -608,21 +608,21 @@ macro_rules! dmamux {
 
 dmamux! {
     dma1: {
-        C1: (c0cr, c1s, DMA1_C1_SEL),
-        C2: (c1cr, c2s, DMA1_C2_SEL),
-        C3: (c2cr, c3s, DMA1_C3_SEL),
-        C4: (c3cr, c4s, DMA1_C4_SEL),
-        C5: (c4cr, c5s, DMA1_C5_SEL),
-        C6: (c5cr, c6s, DMA1_C6_SEL),
-        C7: (c6cr, c7s, DMA1_C7_SEL),
+        C1: (0, c1s, DMA1_C1_SEL),
+        C2: (1, c2s, DMA1_C2_SEL),
+        C3: (2, c3s, DMA1_C3_SEL),
+        C4: (3, c4s, DMA1_C4_SEL),
+        C5: (4, c5s, DMA1_C5_SEL),
+        C6: (5, c6s, DMA1_C6_SEL),
+        C7: (6, c7s, DMA1_C7_SEL),
     },
     dma2: {
-        C1: (c7cr, c1s, DMA2_C1_SEL),
-        C2: (c8cr, c2s, DMA2_C2_SEL),
-        C3: (c9cr, c3s, DMA2_C3_SEL),
-        C4: (c10cr, c4s, DMA2_C4_SEL),
-        C5: (c11cr, c5s, DMA2_C5_SEL),
-        C6: (c12cr, c6s, DMA2_C6_SEL),
-        C7: (c13cr, c7s, DMA2_C7_SEL),
+        C1: (7, c1s, DMA2_C1_SEL),
+        C2: (8, c2s, DMA2_C2_SEL),
+        C3: (9, c3s, DMA2_C3_SEL),
+        C4: (10, c4s, DMA2_C4_SEL),
+        C5: (11, c5s, DMA2_C5_SEL),
+        C6: (12, c6s, DMA2_C6_SEL),
+        C7: (13, c7s, DMA2_C7_SEL),
     },
 }
