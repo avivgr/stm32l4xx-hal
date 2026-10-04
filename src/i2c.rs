@@ -295,6 +295,30 @@ macro_rules! busy_wait {
     };
 }
 
+/// Waits until the peripheral is ready to begin a new transfer.
+///
+/// The previous guard was `while cr2.read().start().bit_is_set() {}`, which
+/// checks the wrong thing: hardware clears `START` as soon as the start plus
+/// address has been sent, so it goes clear early in the *previous* transfer and
+/// says nothing about whether that transfer finished.
+///
+/// With `wait_for_stop!` on the success paths this is mostly belt and braces,
+/// but the error paths still return without it -- `busy_wait!`'s NACK branch
+/// requests a stop and returns `Err` immediately -- so a transfer following a
+/// NACK can still arrive here with a stop in flight. A stale `STOPF` is also
+/// cleared, so the next `wait_for_stop!` cannot be satisfied by a leftover flag
+/// from the previous transfer.
+macro_rules! prepare_transfer {
+    ($i2c:expr) => {
+        // Both bits are cleared by hardware when their condition has been sent.
+        while $i2c.cr2.read().start().bit_is_set() || $i2c.cr2.read().stop().bit_is_set() {}
+
+        if $i2c.isr.read().stopf().bit_is_set() {
+            $i2c.icr.write(|w| w.stopcf().set_bit());
+        }
+    };
+}
+
 /// Waits for the STOP condition to appear on the bus and clears its flag.
 ///
 /// Every transfer must end with this. Requesting a STOP -- or letting AUTOEND
@@ -325,10 +349,7 @@ where
         // TODO support transfers of more than 255 bytes
         assert!(bytes.len() < 256);
 
-        // Wait for any previous address sequence to end
-        // automatically. This could be up to 50% of a bus
-        // cycle (ie. up to 0.5/freq)
-        while self.i2c.cr2.read().start().bit_is_set() {}
+        prepare_transfer!(self.i2c);
 
         // Set START and prepare to send `bytes`. The
         // START bit can be set even if the bus is BUSY or
@@ -381,10 +402,7 @@ where
         // TODO support transfers of more than 255 bytes
         assert!(buffer.len() < 256 && buffer.len() > 0);
 
-        // Wait for any previous address sequence to end
-        // automatically. This could be up to 50% of a bus
-        // cycle (ie. up to 0.5/freq)
-        while self.i2c.cr2.read().start().bit_is_set() {}
+        prepare_transfer!(self.i2c);
 
         // Set START and prepare to receive bytes into
         // `buffer`. The START bit can be set even if the bus
@@ -429,10 +447,7 @@ where
         assert!(bytes.len() < 256 && bytes.len() > 0);
         assert!(buffer.len() < 256 && buffer.len() > 0);
 
-        // Wait for any previous address sequence to end
-        // automatically. This could be up to 50% of a bus
-        // cycle (ie. up to 0.5/freq)
-        while self.i2c.cr2.read().start().bit_is_set() {}
+        prepare_transfer!(self.i2c);
 
         // Set START and prepare to send `bytes`. The
         // START bit can be set even if the bus is BUSY or
