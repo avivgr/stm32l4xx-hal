@@ -295,6 +295,26 @@ macro_rules! busy_wait {
     };
 }
 
+/// Waits for the STOP condition to appear on the bus and clears its flag.
+///
+/// Every transfer must end with this. Requesting a STOP -- or letting AUTOEND
+/// request one -- and returning immediately leaves two pieces of state behind:
+/// the stop may still be in progress, so the bus is not yet idle, and `STOPF`
+/// stays set because nothing writes `ICR.STOPCF`. The next transfer then begins
+/// against a peripheral that is not where the driver assumes it is, and the
+/// failure is a `busy_wait!` that spins forever on a flag which can no longer
+/// arrive.
+///
+/// `stm32f4xx-hal` waits on the equivalent CR1 bit for the same reason, and its
+/// comment is worth repeating: "Otherwise, the interface will still be busy for
+/// a while after this function returns."
+macro_rules! wait_for_stop {
+    ($i2c:expr) => {
+        while $i2c.isr.read().stopf().bit_is_clear() {}
+        $i2c.icr.write(|w| w.stopcf().set_bit());
+    };
+}
+
 impl<PINS, I2C> Write for I2c<I2C, PINS>
 where
     I2C: Deref<Target = i2c1::RegisterBlock>,
@@ -344,6 +364,8 @@ where
         // Stop
         self.i2c.cr2.write(|w| w.stop().set_bit());
 
+        wait_for_stop!(self.i2c);
+
         Ok(())
         // Tx::new(&self.i2c)?.write(addr, bytes)
     }
@@ -387,7 +409,9 @@ where
             *byte = self.i2c.rxdr.read().rxdata().bits();
         }
 
-        // automatic STOP
+        // AUTOEND generates the STOP for us, but it still has to finish and
+        // still sets STOPF.
+        wait_for_stop!(self.i2c);
 
         Ok(())
         // Rx::new(&self.i2c)?.read(addr, buffer)
@@ -462,6 +486,10 @@ where
 
             *byte = self.i2c.rxdr.read().rxdata().bits();
         }
+
+        // The read phase used AUTOEND, so the STOP is generated for us -- but it
+        // still has to finish, and it still sets STOPF.
+        wait_for_stop!(self.i2c);
 
         Ok(())
     }
