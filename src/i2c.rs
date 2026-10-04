@@ -37,6 +37,10 @@ pub enum Error {
     Arbitration,
     /// NACK
     Nack,
+    /// A flag the driver was waiting for never arrived.
+    ///
+    /// Returned instead of blocking forever. See [`TIMEOUT_ITERS`].
+    Timeout,
     // Overrun, // slave mode only
     // Pec, // SMBUS mode only
     // Timeout, // SMBUS mode only
@@ -273,6 +277,7 @@ macro_rules! flush_txdr {
 
 macro_rules! busy_wait {
     ($i2c:expr, $flag:ident, $variant:ident) => {
+        let mut budget = TIMEOUT_ITERS;
         loop {
             let isr = $i2c.isr.read();
 
@@ -288,8 +293,10 @@ macro_rules! busy_wait {
                 $i2c.icr.write(|w| w.stopcf().set_bit().nackcf().set_bit());
                 flush_txdr!($i2c);
                 return Err(Error::Nack);
+            } else if budget == 0 {
+                return Err(Error::Timeout);
             } else {
-                // try again
+                budget -= 1;
             }
         }
     };
@@ -308,10 +315,39 @@ macro_rules! busy_wait {
 /// NACK can still arrive here with a stop in flight. A stale `STOPF` is also
 /// cleared, so the next `wait_for_stop!` cannot be satisfied by a leftover flag
 /// from the previous transfer.
+/// Spin budget for the blocking flag waits, in loop iterations.
+///
+/// Every wait in this driver was previously unbounded: `busy_wait!` could exit
+/// on the flag, BERR, ARLO or NACKF, and nothing else. "The flag cannot arrive,
+/// because of the state the peripheral is in" was not among the exits, so a
+/// protocol upset became a permanent hang with no error returned -- and on a
+/// board whose I2C device cannot be power-cycled independently, permanent means
+/// until the whole board loses power.
+///
+/// The budget is deliberately far longer than any legitimate wait rather than
+/// tuned. The slowest thing waited on here is one byte at the lowest sensible
+/// bus rate: ~90 us at 100 kHz, which even a 16 MHz core covers in a few
+/// hundred iterations of these loops. A million iterations is on the order of a
+/// second -- long enough that no working bus ever reaches it, short enough that
+/// a caller gets an error instead of a dead product.
+///
+/// A cycle-accurate budget would be better. `stm32f1xx-hal` derives per-phase
+/// timeouts from the DWT cycle counter, which is the right shape, but it makes
+/// the blocking API depend on `Clocks` and on DWT being enabled. That is a
+/// larger change than this fix should carry, so the iteration count is the
+/// conservative version: it bounds the failure without changing the API.
+const TIMEOUT_ITERS: u32 = 1_000_000;
+
 macro_rules! prepare_transfer {
     ($i2c:expr) => {
         // Both bits are cleared by hardware when their condition has been sent.
-        while $i2c.cr2.read().start().bit_is_set() || $i2c.cr2.read().stop().bit_is_set() {}
+        let mut budget = TIMEOUT_ITERS;
+        while $i2c.cr2.read().start().bit_is_set() || $i2c.cr2.read().stop().bit_is_set() {
+            budget -= 1;
+            if budget == 0 {
+                return Err(Error::Timeout);
+            }
+        }
 
         if $i2c.isr.read().stopf().bit_is_set() {
             $i2c.icr.write(|w| w.stopcf().set_bit());
@@ -334,7 +370,13 @@ macro_rules! prepare_transfer {
 /// a while after this function returns."
 macro_rules! wait_for_stop {
     ($i2c:expr) => {
-        while $i2c.isr.read().stopf().bit_is_clear() {}
+        let mut budget = TIMEOUT_ITERS;
+        while $i2c.isr.read().stopf().bit_is_clear() {
+            budget -= 1;
+            if budget == 0 {
+                return Err(Error::Timeout);
+            }
+        }
         $i2c.icr.write(|w| w.stopcf().set_bit());
     };
 }
